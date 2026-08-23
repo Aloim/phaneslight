@@ -1,5 +1,5 @@
 <!-- DOC | The verbatim tests/README.md body `phanes scaffold` writes when a project has no test tree README; phanes.md Phase 2.5 Step 1b is the authoritative wording. -->
-<!-- phanes-template v3.4.0 readme-tests -->
+<!-- phanes-template v3.4.1 readme-tests -->
 <!-- Verbatim tests/README.md body (phanes.md Phase 2.5 Step 1b), consumed by
      `phanes scaffold`; written only when tests/README.md is absent. -->
 <!-- SECTION tests-readme -->

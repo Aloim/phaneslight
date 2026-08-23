@@ -1,5 +1,5 @@
 <!-- DOC | The canonical doc-discipline header block every documentation file carries, fetched so sessions and generated scripts quote one tested source; phanes.md Phase 2.5 Step 2b is the authoritative wording. -->
-<!-- phanes-template v3.4.0 doc-header -->
+<!-- phanes-template v3.4.1 doc-header -->
 <!-- The canonical doc-discipline header block (phanes.md Phase 2.5 Step 2b), fetched so the
      session and fallback-generated scripts quote one tested source instead of re-deriving it.
      `phanes scaffold` verifies its presence; the block is instantiated by whoever authors a

@@ -1,7 +1,7 @@
 <!-- DOC | The sub-agent definition template Phanes instantiates once per roster agent in Phase 4; these two provenance header lines are never copied into generated agents. -->
-<!-- phanes-template v3.4.0 agent-definition -->
+<!-- phanes-template v3.4.1 agent-definition -->
 ---
-name: <projectSlug>-<role>   # MUST equal the filename stem, e.g. blueprompt-executor
+name: <projectSlug>-<role>   # MUST equal the filename stem, e.g. acme-executor
 description: "Provides [concise capability/purpose]. MUST BE USED for [hard-trigger topics or cues]. Use PROACTIVELY when you hear [trigger keywords / scenario examples]. ≤50 words total."
 color: <color-choice>  # Essential for visual tracking in team operations
 model: sonnet | opus | haiku  # Must be defined using the Model & Effort Selection rubric. Default is sonnet for every roster agent; opus ONLY for the plan-authoring chain (the initial plan and the Critic pass that reviews it, through plan close) and the security-review specialization; haiku for scouts, retrieval, and mechanical transforms. No effort field: every non-haiku agent runs at the session's single level, high (v3.4).

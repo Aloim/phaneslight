@@ -1,4 +1,4 @@
-# phanes-template v3.4.0 preflight
+# phanes-template v3.4.1 preflight
 # Phase 0 mechanical pre-flights, observed and reported, NEVER acted on: run-type marker,
 # installed version, upstream stamp (network-tolerant, 10s timeout, single attempt), the four
 # standard MCP servers via `claude mcp list`, platform, capability-census counts, and the

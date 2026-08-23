@@ -1,4 +1,4 @@
-# phanes-template v3.4.0 census-diff
+# phanes-template v3.4.1 census-diff
 # Re-enumerates the disk-visible capability surfaces (MCP servers via `claude mcp list`,
 # plugins, skills, commands) and diffs them against capabilities.selection[] recorded in
 # .phanes/config.json, mechanizing the update-run "diff, don't re-ask" duty. Prints a digest

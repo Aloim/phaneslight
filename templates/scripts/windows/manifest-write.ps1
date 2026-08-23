@@ -1,4 +1,4 @@
-# phanes-template v3.4.0 manifest-write
+# phanes-template v3.4.1 manifest-write
 # Recomputes sha256 provenance for every installed script (.phanes/scripts/) and prompt
 # template (.claude/template/) and rewrites .phanes/manifest.json (schema: phanes.md Phase 5).
 # Blessing the CURRENT disk state is this script's one job: drift detection against the

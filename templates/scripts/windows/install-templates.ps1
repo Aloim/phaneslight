@@ -1,4 +1,4 @@
-# phanes-template v3.4.0 install-templates
+# phanes-template v3.4.1 install-templates
 # Mechanizes CHECKLIST items 1-4, 6-9, and 11 for the Windows platform: fetches the manifest's
 # windows script set plus the every-platform files (cli.js, prompt templates) into a staging
 # directory, sanity-checks every stamp THERE, and only then installs (scripts flat into

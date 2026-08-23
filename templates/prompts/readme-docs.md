@@ -1,5 +1,5 @@
 <!-- DOC | The verbatim README bodies `phanes scaffold` writes into the documentation tree (session summaries, architecture, registry); phanes.md Phase 2.5 Step 2 is the authoritative wording. -->
-<!-- phanes-template v3.4.0 readme-docs -->
+<!-- phanes-template v3.4.1 readme-docs -->
 <!-- Verbatim README bodies for the documentation tree (phanes.md Phase 2.5 Step 2), consumed
      by `phanes scaffold`: each SECTION block is written verbatim (LF-normalized) to its target file when,
      and only when, that file is absent. Merge-never-overwrite: an existing file is never

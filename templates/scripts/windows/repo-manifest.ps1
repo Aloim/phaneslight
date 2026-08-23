@@ -1,4 +1,4 @@
-# phanes-template v3.4.0 repo-manifest
+# phanes-template v3.4.1 repo-manifest
 # Generates the deterministic raw file list (.phanes/inventory/raw-files.txt, from
 # git ls-files, docRoot/.phanes/.claude trees and binary extensions excluded) and diffs
 # it against the Claude-maintained annotated summary list (annotated-files.json, shape
