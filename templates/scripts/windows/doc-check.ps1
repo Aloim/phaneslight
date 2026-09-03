@@ -1,4 +1,4 @@
-# phanes-template v3.4.1 doc-check
+# phaneslight-template v3.6.1 doc-check
 # Scans the documentation tree (archive/ excluded) for living documents over the 500-line ceiling
 # or missing a DOC header line, for folders holding docs but no _index.md, and for indexes older
 # than their newest sibling. Prints offenders with line counts. Frozen artifact classes (session
@@ -7,24 +7,24 @@
 $ErrorActionPreference = 'Stop'
 $CEILING = 500
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   $d = (Get-Location).Path
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
   }
 }
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('doc-check: .phanes/config.json not found from this directory'); exit 0 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('doc-check: .phaneslight/config.json not found from this directory'); exit 0 }
 
 $cfg = $null
 try {
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
 } catch {
-  [Console]::Error.WriteLine('doc-check: .phanes/config.json is malformed, using defaults')
+  [Console]::Error.WriteLine('doc-check: .phaneslight/config.json is malformed, using defaults')
   $cfg = $null
 }
 $docRoot = 'documentation'
@@ -167,7 +167,7 @@ foreach ($folder in $folders) {
   if ($newestChild -gt $indexTime) {
     # Root-relative, same base as NO-INDEX above: both name a folder, and the docRoot folder
     # itself has no docRoot-relative spelling (it printed as a bare "/").
-    Write-Output ("STALE-INDEX: {0}/ (run phanes doc-index)" -f (RelRoot $fn))
+    Write-Output ("STALE-INDEX: {0}/ (run phaneslight doc-index)" -f (RelRoot $fn))
     $offenders++
   }
 }

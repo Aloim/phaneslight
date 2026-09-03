@@ -1,6 +1,6 @@
-# phanes-template v3.4.1 repo-manifest
-# Generates the deterministic raw file list (.phanes/inventory/raw-files.txt, from
-# git ls-files, docRoot/.phanes/.claude trees and binary extensions excluded) and diffs
+# phaneslight-template v3.6.1 repo-manifest
+# Generates the deterministic raw file list (.phaneslight/inventory/raw-files.txt, from
+# git ls-files, docRoot/.phaneslight/.claude trees and binary extensions excluded) and diffs
 # it against the Claude-maintained annotated summary list (annotated-files.json, shape
 # {path: {summary, hash}}). Staleness is content-hash based: the hash is the index blob
 # sha that git ls-files -s already returns. Pruning is keyed to GENUINE absence from the
@@ -17,10 +17,10 @@ function Write-Utf8([string]$path, [string]$content) {
   [System.IO.File]::WriteAllText($path, $content, $UTF8_NO_BOM)
 }
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   $d = (Get-Location).Path
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
@@ -70,10 +70,10 @@ function ConvertTo-NodeJson($value, [int]$indent) {
   return ConvertTo-JsonStringLiteral ([string]$value)
 }
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('repo-manifest: .phanes/config.json not found from this directory'); exit 0 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('repo-manifest: .phaneslight/config.json not found from this directory'); exit 0 }
 
-$invDir = Join-Path $root '.phanes\inventory'
+$invDir = Join-Path $root '.phaneslight\inventory'
 $rawFile = Join-Path $invDir 'raw-files.txt'
 $annotatedFile = Join-Path $invDir 'annotated-files.json'
 
@@ -100,12 +100,12 @@ $docRoot = 'documentation'
 $configUntrusted = $false
 $cfg = $null
 try {
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
   if (-not ($cfg -is [System.Management.Automation.PSCustomObject])) { $cfg = $null }
 } catch { $cfg = $null }
 if ($null -eq $cfg) {
   $configUntrusted = $true
-  [Console]::Error.WriteLine('repo-manifest: .phanes/config.json is malformed or unreadable; running on default filters, pruning and annotation writes suppressed so no summary can be lost to a misread config')
+  [Console]::Error.WriteLine('repo-manifest: .phaneslight/config.json is malformed or unreadable; running on default filters, pruning and annotation writes suppressed so no summary can be lost to a misread config')
 }
 if (-not $configUntrusted -and ($cfg.docRoot -is [string]) -and $cfg.docRoot -ne '') { $docRoot = $cfg.docRoot }
 $report.configUntrusted = $configUntrusted
@@ -150,7 +150,7 @@ foreach ($e in $lsText.Split([char]0)) {
   if ($meta.Length -lt 3) { continue }
   $p = $e.Substring($tab + 1)
   $hashByPath[$p] = $meta[1]
-  if ($p.StartsWith($docPrefix, [System.StringComparison]::Ordinal) -or $p.StartsWith('.phanes/', [System.StringComparison]::Ordinal) -or $p.StartsWith('.claude/', [System.StringComparison]::Ordinal)) { continue }
+  if ($p.StartsWith($docPrefix, [System.StringComparison]::Ordinal) -or $p.StartsWith('.phaneslight/', [System.StringComparison]::Ordinal) -or $p.StartsWith('.claude/', [System.StringComparison]::Ordinal)) { continue }
   if ($p -match $binRe) { continue }
   [void]$rawPaths.Add($p)
 }
@@ -171,7 +171,7 @@ try {
 } catch {
   $annotatedObj = $null
   $annotatedMalformed = $true
-  [Console]::Error.WriteLine('repo-manifest: .phanes/inventory/annotated-files.json is malformed, left untouched; the raw list was still regenerated')
+  [Console]::Error.WriteLine('repo-manifest: .phaneslight/inventory/annotated-files.json is malformed, left untouched; the raw list was still regenerated')
 }
 $report.annotatedMalformed = $annotatedMalformed
 

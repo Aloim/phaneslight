@@ -1,21 +1,22 @@
-# phanes-template v3.4.1 batch-apply
+# phaneslight-template v3.6.1 batch-apply
 # Applies a batch of {file, old, new} exact-match edits and prints a per-edit review diff
 # computed against saved pre-images. Git is NOT a dependency: the undo substrate is a
 # byte-for-byte pre-image of every file touched, saved before the first write, so this
 # works on untracked files, gitignored files, dirty trees, and outside any repository.
 # Modes: default applies per-edit (failures do not discard the other edits); --atomic is
 # all-or-nothing; --reject <indices> restores pre-images and re-applies the surviving
-# edits of the SAME batch (the Critic hunk-rejection path).
+# edits of the SAME batch (the writing agent's self-check rejection path;
+# the printed diff is also what <projectSlug>-closure reconciles against intent).
 # Exit codes: 0 every requested edit applied; 1 usage error (nothing touched);
 # 2 --reject refused (nothing touched); 3 nothing applied (all edits failed, or a write
 # failure was reverted from pre-images); 4 partial (some applied, some failed).
 $ErrorActionPreference = 'Stop'
 $DIFF_CAP = 20000
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   $d = (Get-Location).Path
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
@@ -136,8 +137,8 @@ function Show-Usage([string]$msg) {
   exit 1
 }
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('batch-apply: .phanes/config.json not found from this directory'); exit 1 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('batch-apply: .phaneslight/config.json not found from this directory'); exit 1 }
 
 $batchArg = $null; $atomic = $false; $rejectArg = $null
 for ($i = 0; $i -lt $args.Count; $i++) {
@@ -173,7 +174,7 @@ $rootReal = (Resolve-Path -LiteralPath $root).Path
 $rootPrefix = $rootReal.TrimEnd('\') + '\'
 $cmpPrefix = $rootPrefix.ToLowerInvariant()
 $rootKey = (Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes($rootReal.ToLowerInvariant()))).Substring(0, 16)
-$stateDir = Join-Path $env:TEMP (Join-Path 'phanes-batch' $rootKey)
+$stateDir = Join-Path $env:TEMP (Join-Path 'phaneslight-batch' $rootKey)
 $preDir = Join-Path $stateDir 'pre'
 $stateFile = Join-Path $stateDir 'state.json'
 $batchSha = Get-Sha256Hex $batchBytes

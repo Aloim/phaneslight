@@ -1,7 +1,7 @@
-<!-- DOC | The verbatim tests/README.md body `phanes scaffold` writes when a project has no test tree README; phanes.md Phase 2.5 Step 1b is the authoritative wording. -->
-<!-- phanes-template v3.4.1 readme-tests -->
-<!-- Verbatim tests/README.md body (phanes.md Phase 2.5 Step 1b), consumed by
-     `phanes scaffold`; written only when tests/README.md is absent. -->
+<!-- DOC | The verbatim tests/README.md body `phaneslight scaffold` writes when a project has no test tree README; phaneslight.md Phase 2.5 Step 1b is the authoritative wording. -->
+<!-- phaneslight-template v3.6.1 readme-tests -->
+<!-- Verbatim tests/README.md body (phaneslight.md Phase 2.5 Step 1b), consumed by
+     `phaneslight scaffold`; written only when tests/README.md is absent. -->
 <!-- SECTION tests-readme -->
 Test tree for this project.
 
@@ -13,8 +13,8 @@ Layout:
 - helpers/, shared builders, matchers, and harness code.
 
 Conventions:
-- New tests are created via `phanes new-file tests <path> "<description>"` (same header stamp rule as src/).
-- TDD workflow: write failing test → commit → implement → commit (see CLAUDE.md workflows).
+- New tests are created via `phaneslight new-file tests <path> "<description>"` (same header stamp rule as src/).
+- TDD workflow: write failing test â†’ commit â†’ implement â†’ commit (see CLAUDE.md workflows).
 - Integration tests for migrations or DB-touching code MUST hit a real database, not mocks.
 - Test files mirror the src/ module path of the code under test so navigation is mechanical.
 

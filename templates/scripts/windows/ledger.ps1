@@ -1,4 +1,4 @@
-# phanes-template v3.4.1 ledger
+# phaneslight-template v3.6.1 ledger
 # Run-progress ledger mechanics (Phase 0 Compaction Survival made mechanical). Subcommands:
 #   ledger append "<line>"  appends one caller-composed line (the caller owns the format;
 #                           this script only writes; an argument containing CR or LF is
@@ -23,7 +23,7 @@ $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -37,7 +37,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -56,14 +56,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -84,7 +84,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -116,7 +116,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -165,7 +165,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -189,12 +189,12 @@ function Read-PhanesTextFile([string]$Path) {
 }
 # END SHARED core
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('ledger: .phanes/config.json not found from this directory'); exit 0 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('ledger: .phaneslight/config.json not found from this directory'); exit 0 }
 
-$phanesDir = Join-Path $root '.phanes'
-$ledgerFile = Join-Path $phanesDir 'run-progress'
-$prevFile = Join-Path $phanesDir 'run-progress.prev'
+$phaneslightDir = Join-Path $root '.phaneslight'
+$ledgerFile = Join-Path $phaneslightDir 'run-progress'
+$prevFile = Join-Path $phaneslightDir 'run-progress.prev'
 
 # Ledger state, as the THREE answers the caller must be able to tell apart. Returns a hashtable
 # with Readable (bool) and Last (the last non-empty line, or $null).
@@ -202,13 +202,13 @@ $prevFile = Join-Path $phanesDir 'run-progress.prev'
 # LG-3 repair: the draft returned $null both when the ledger was absent and when it existed but
 # could not be read (exclusive lock, denied ACL, a directory sitting in its place), and $null
 # meant ABSENT, which is the FRESH PROJECT verdict. So a run whose ledger could not be read
-# reported as a project that never had one. Read-PhanesTextFile separates the two, and every
+# reported as a project that never had one. Read-PhanesLightTextFile separates the two, and every
 # caller below branches on Readable BEFORE it acts.
 #
 # Reading by line still tolerates CRLF ledgers written by earlier sessions; everything THIS
 # script writes is LF and BOM-free.
 function Get-LedgerState {
-  $r = Read-PhanesTextFile $ledgerFile
+  $r = Read-PhanesLightTextFile $ledgerFile
   if ($r.Status -ceq 'absent') { return @{ Readable = $true; Last = $null } }
   if ($r.Status -cne 'ok') { return @{ Readable = $false; Last = $null } }
   $lines = @()
@@ -238,7 +238,7 @@ switch -casesensitive ($sub) {
       exit 0
     }
     try {
-      New-Item -ItemType Directory -Force -Path $phanesDir | Out-Null
+      New-Item -ItemType Directory -Force -Path $phaneslightDir | Out-Null
       [System.IO.File]::AppendAllText($ledgerFile, $line + "`n", $UTF8_NO_BOM)
     } catch {
       [Console]::Error.WriteLine("ledger: cannot write $ledgerFile ($($_.Exception.Message))")
@@ -265,7 +265,7 @@ switch -casesensitive ($sub) {
     }
     if ($null -ne $st.Last -and $st.Last -ceq $TERMINATOR) { exit 0 }
     try {
-      New-Item -ItemType Directory -Force -Path $phanesDir | Out-Null
+      New-Item -ItemType Directory -Force -Path $phaneslightDir | Out-Null
       [System.IO.File]::AppendAllText($ledgerFile, $TERMINATOR + "`n", $UTF8_NO_BOM)
     } catch {
       [Console]::Error.WriteLine("ledger: cannot write $ledgerFile ($($_.Exception.Message))")

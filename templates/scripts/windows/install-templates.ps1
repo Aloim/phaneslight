@@ -1,8 +1,8 @@
-# phanes-template v3.4.1 install-templates
+# phaneslight-template v3.6.1 install-templates
 # Mechanizes CHECKLIST items 1-4, 6-9, and 11 for the Windows platform: fetches the manifest's
 # windows script set plus the every-platform files (cli.js, prompt templates) into a staging
 # directory, sanity-checks every stamp THERE, and only then installs (scripts flat into
-# .phanes/scripts/, prompts to their installPath), merges the settings fragment preserving
+# .phaneslight/scripts/, prompts to their installPath), merges the settings fragment preserving
 # existing hooks, verifies the merge, smoke-runs the cli chain, writes the config templates
 # block, and records provenance by invoking the just-installed manifest-write. Stage-then-
 # commit: every fetch or stamp failure aborts BEFORE anything touches the project. Preserve
@@ -25,7 +25,7 @@ $SMOKE_TIMEOUT_MS = 60000   # N5: explicit bound on each smoke-run child process
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -39,7 +39,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -58,14 +58,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -86,7 +86,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -118,7 +118,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -167,7 +167,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -266,7 +266,20 @@ function ConvertTo-NodeJson($value, [int]$indent) {
 }
 # END SHARED json
 
-function Fail([string]$msg) { [Console]::Error.WriteLine("install-templates: FAILED: $msg"); exit 1 }
+# (v4.0.0-beta, 2026-09-03) EVERY FAILURE PATH SWEEPS THE STAGING DIRECTORY, and until this fix none
+# of them did. `$staging` is created before the fetch below and removed only on the happy path
+# immediately before `exit 0`, so every `Fail` between the two exited leaving a full copy of the
+# fetched template tree behind in `%TEMP%`. Measured on one machine on 2026-09-03: 46
+# `phaneslight-install-*` directories, 28,479,057 bytes, dated 2026-08-24 to 2026-09-02. The sweep lives
+# here rather than in a `finally` because `Fail` is not inside a `try`, and it is guarded on
+# `$script:staging` because most argument and precondition failures are raised BEFORE the variable
+# exists, where the guard reads `$null` and the sweep is correctly skipped. The removal is wrapped
+# because a failing cleanup must never replace the real message with its own.
+function Fail([string]$msg) {
+  [Console]::Error.WriteLine("install-templates: FAILED: $msg")
+  if ($script:staging -and (Test-Path -LiteralPath $script:staging)) { try { Remove-Item -LiteralPath $script:staging -Recurse -Force } catch { } }
+  exit 1
+}
 
 # --- arguments
 $source = $null
@@ -281,26 +294,26 @@ for ($i = 0; $i -lt $args.Count; $i++) {
 $ownVersion = $null
 try {
   $selfHead = Get-Content -LiteralPath $PSCommandPath -TotalCount 2 -Encoding utf8
-  $m = [regex]::Match(($selfHead -join "`n"), 'phanes-template v(\d+\.\d+\.\d+)')
+  $m = [regex]::Match(($selfHead -join "`n"), 'phaneslight-template v(\d+\.\d+\.\d+)')
   if ($m.Success) { $ownVersion = $m.Groups[1].Value }
 } catch { }
 if ($null -eq $ownVersion) { Fail 'cannot read own version stamp' }
-if ($null -eq $source) { $source = "https://raw.githubusercontent.com/Aloim/phanes/v$ownVersion/templates" }
+if ($null -eq $source) { $source = "https://raw.githubusercontent.com/Aloim/phaneslight/v$ownVersion/templates" }
 $sourceIsDir = Test-Path -LiteralPath $source -PathType Container
 
-$root = Find-PhanesRoot
-if (-not $root) { Fail '.phanes/config.json not found from this directory (CHECKLIST item 6: config is written before the first script runs)' }
+$root = Find-PhanesLightRoot
+if (-not $root) { Fail '.phaneslight/config.json not found from this directory (CHECKLIST item 6: config is written before the first script runs)' }
 $cfg = $null
 try {
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
 } catch {
-  Fail '.phanes/config.json is malformed; repair it before installing (item 6)'
+  Fail '.phaneslight/config.json is malformed; repair it before installing (item 6)'
 }
 
 # Existing provenance (preserve substrate). Absent = fresh install, no records. Malformed =
 # refuse: without readable records the customized-file preserve rule cannot be honored, and
 # overwriting blind is exactly the destroy reflex this library forbids.
-$manifestPath = Join-Path $root '.phanes\manifest.json'
+$manifestPath = Join-Path $root '.phaneslight\manifest.json'
 # C3 repair. The two halves of the preserve rule disagreed about case: preservation was DECIDED
 # by ContainsKey on a bare @{} (OrdinalIgnoreCase) and flagged back with -ccontains
 # (case-sensitive). So a file preserved through a case-differing record was never flagged, and
@@ -315,20 +328,20 @@ if (Test-Path -LiteralPath $manifestPath) {
     $prov = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json
     foreach ($a in @($prov.artifacts)) { if ($a.path -is [string]) { $recordByPath[($a.path -replace '\\', '/')] = $a } }
   } catch {
-    Fail '.phanes/manifest.json exists but cannot be parsed; the customized-file preserve rule cannot be honored, nothing installed. Repair or deliberately delete it first'
+    Fail '.phaneslight/manifest.json exists but cannot be parsed; the customized-file preserve rule cannot be honored, nothing installed. Repair or deliberately delete it first'
   }
 }
 
 # --- staging fetch (nothing below touches the project until every file passed its check)
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
-$staging = Join-Path $env:TEMP ("phanes-install-" + [System.Guid]::NewGuid().ToString('N'))
+$staging = Join-Path $env:TEMP ("phaneslight-install-" + [System.Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $staging | Out-Null
 function Fetch-One([string]$rel) {
   $dest = Join-Path $script:staging ($rel -replace '/', '\')
   # C2, the staging half: `rel` is also manifest-sourced, so a traversing rel escapes the
   # staging directory exactly as a traversing installPath escaped the project. Refusing here
   # means a hostile or damaged manifest cannot write anywhere on the way in either.
-  if ([System.IO.Path]::IsPathRooted($rel) -or -not (Test-PhanesContained $script:staging $dest)) {
+  if ([System.IO.Path]::IsPathRooted($rel) -or -not (Test-PhanesLightContained $script:staging $dest)) {
     [Console]::Error.WriteLine("install-templates: manifest path '$rel' escapes the staging directory; refusing")
     return $false
   }
@@ -357,7 +370,7 @@ foreach ($s in @($man.scripts)) {
   $files = @($s.windows | Where-Object { $_ -is [string] })
   if ($files.Count -eq 0) { Write-Output ("SKIPPED (no windows variant): $($s.name)"); continue }
   foreach ($rel in $files) {
-    [void]$plan.Add(@{ rel = [string]$rel; name = [string]$s.name; kind = 'script'; installPath = ('.phanes/scripts/' + [System.IO.Path]::GetFileName([string]$rel)) })
+    [void]$plan.Add(@{ rel = [string]$rel; name = [string]$s.name; kind = 'script'; installPath = ('.phaneslight/scripts/' + [System.IO.Path]::GetFileName([string]$rel)) })
   }
 }
 foreach ($p in @($man.promptTemplates)) {
@@ -376,7 +389,7 @@ foreach ($e in $plan) {
   $staged = Join-Path $staging ($e.rel -replace '/', '\')
   $head = @()
   try { $head = @(Get-Content -LiteralPath $staged -TotalCount 2 -Encoding utf8) } catch { }
-  $want = "phanes-template v$ownVersion $($e.name)"
+  $want = "phaneslight-template v$ownVersion $($e.name)"
   $ok = $false
   foreach ($ln in $head) { if (([string]$ln).IndexOf($want, [System.StringComparison]::Ordinal) -ge 0) { $ok = $true; break } }
   if (-not $ok) { Fail "stamp check failed for $($e.rel) (expected '$want' within the first two lines); nothing installed" }
@@ -387,7 +400,7 @@ try {
   if (-not $frag.hooks) { throw 'no hooks key' }
 } catch { Fail "fetched settings fragment $fragRel is not a hooks JSON; nothing installed" }
 
-# --- install (item 4: flat into .phanes/scripts/, extension kept; prompts to installPath).
+# --- install (item 4: flat into .phaneslight/scripts/, extension kept; prompts to installPath).
 # C2 repair, and the severity comes from where the string originates. `installPath` is taken
 # verbatim from the FETCHED manifest, and the default source is a remote raw URL, so this is a
 # path traversal whose payload is REMOTE CONTENT. `"installPath": "../ESCAPED-OUTSIDE-ROOT.md"`
@@ -402,17 +415,17 @@ foreach ($e in $plan) {
   if ([System.IO.Path]::IsPathRooted($e.installPath)) {
     Fail "manifest installPath '$($e.installPath)' is absolute; installPath must be relative to the project root. Nothing installed"
   }
-  if (-not (Test-PhanesContained $root (Join-Path $root ($e.installPath -replace '/', '\')))) {
+  if (-not (Test-PhanesLightContained $root (Join-Path $root ($e.installPath -replace '/', '\')))) {
     Fail "manifest installPath '$($e.installPath)' resolves outside the project root; nothing installed"
   }
 }
 
 # Only now, with every installPath validated, is the project touched at all. This ordering is
 # load-bearing for the state (A) guarantee: the directory creation below used to run BEFORE the
-# gate, so a refused hostile manifest still left `.phanes/scripts/` behind. An empty directory
+# gate, so a refused hostile manifest still left `.phaneslight/scripts/` behind. An empty directory
 # is not damage, but "untouched" has to mean untouched or the contract is only approximately
 # true, and approximately-true contracts are what this review kept finding.
-New-Item -ItemType Directory -Force -Path (Join-Path $root '.phanes\scripts') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $root '.phaneslight\scripts') | Out-Null
 $installed = New-Object System.Collections.ArrayList
 $preserved = New-Object System.Collections.ArrayList
 $staleCustomizations = New-Object System.Collections.ArrayList   # W3.4
@@ -492,23 +505,23 @@ foreach ($evProp in @($frag.hooks.PSObject.Properties | ForEach-Object { $_ })) 
 try { [System.IO.File]::WriteAllText($settingsPath, ((ConvertTo-NodeJson $settings 0) + "`n"), $UTF8_NO_BOM) } catch { Fail "cannot write .claude/settings.json ($($_.Exception.Message))" }
 Write-Output ("settings: merged $mergedNew hook group(s), $mergedKept already present")
 
-# Read-back verification (the Step 4b path-discipline check, mechanical): every Phanes hook
-# command must contain .phanes/scripts/ and carry no drive letter and no leading slash.
+# Read-back verification (the Step 4b path-discipline check, mechanical): every PhanesLight hook
+# command must contain .phaneslight/scripts/ and carry no drive letter and no leading slash.
 #
 # N1 repair, the highest-value single fix in this task. A PRE-EXISTING legacy hook carrying an
-# absolute path (the form Phanes installed before the path-discipline rule existed) made this
+# absolute path (the form PhanesLight installed before the path-discipline rule existed) made this
 # check Fail on a condition THIS RUN DID NOT CREATE AND COULD NOT CLEAR. Result: exit 1, state
 # (B), and every subsequent run repeated it identically. The only escape was a hand-edit of
 # settings.json, which is precisely the manual step mechanization exists to remove, and it is
 # the `:777` update-run hook-repair duty's own target.
 #
-# So a legacy Phanes hook is REPAIRED rather than refused: the absolute prefix is rewritten to
+# So a legacy PhanesLight hook is REPAIRED rather than refused: the absolute prefix is rewritten to
 # the canonical relative form, the change is reported, and the file is written back. Two fences
-# keep this from becoming a destroy reflex. First, only commands already identified as Phanes
-# hooks (they contain `.phanes/scripts/`) are touched; a non-Phanes hook is never rewritten,
+# keep this from becoming a destroy reflex. First, only commands already identified as PhanesLight
+# hooks (they contain `.phaneslight/scripts/`) are touched; a non-PhanesLight hook is never rewritten,
 # whatever it looks like. Second, if the rewrite does not produce a compliant command, the run
 # still fails with the original message rather than writing something it cannot vouch for.
-$verifyRead = Read-PhanesJsonFile $settingsPath
+$verifyRead = Read-PhanesLightJsonFile $settingsPath
 if ($verifyRead.Status -cne 'ok') { Fail ".claude/settings.json is $($verifyRead.Status) after the merge ($($verifyRead.Reason))" }
 $verify = $verifyRead.Value
 $repairedHooks = New-Object System.Collections.ArrayList
@@ -517,12 +530,12 @@ foreach ($evProp in @($verify.hooks.PSObject.Properties | ForEach-Object { $_ })
     foreach ($h in @($grp.hooks)) {
       if (-not ($h.command -is [string])) { continue }
       $c = [string]$h.command
-      if ($c.IndexOf('.phanes/scripts/', [System.StringComparison]::Ordinal) -lt 0) { continue }  # not a Phanes hook
+      if ($c.IndexOf('.phaneslight/scripts/', [System.StringComparison]::Ordinal) -lt 0) { continue }  # not a PhanesLight hook
       $bad = ($c -match '(?i)[a-z]:[\\/]') -or ($c -match '(^|\s)/')
       if (-not $bad) { continue }
       # Rewrite everything up to and including the drive-letter or leading-slash prefix so the
-      # command starts at `.phanes/scripts/`, keeping the invocation words before it intact.
-      $idx = $c.IndexOf('.phanes/scripts/', [System.StringComparison]::Ordinal)
+      # command starts at `.phaneslight/scripts/`, keeping the invocation words before it intact.
+      $idx = $c.IndexOf('.phaneslight/scripts/', [System.StringComparison]::Ordinal)
       $head = $c.Substring(0, $idx)
       $tail = $c.Substring($idx)
       $head = [regex]::Replace($head, '(?i)([a-z]:[\\/]|(?<=^|\s)/)\S*$', '')
@@ -544,7 +557,7 @@ if ($repairedHooks.Count -gt 0) {
   Write-Output ("settings: repaired $($repairedHooks.Count) legacy absolute-path hook command(s) to the relative form")
   foreach ($rc in $repairedHooks) { Write-Output ("  was: $rc") }
 }
-Write-Output 'settings: read-back verification passed (relative .phanes/scripts/ commands only)'
+Write-Output 'settings: read-back verification passed (relative .phaneslight/scripts/ commands only)'
 
 # --- item 7: smoke run through the cross-shell entry. Native stderr is NOT redirected here:
 # --- under EAP-Stop a redirected native stderr line becomes a terminating ErrorRecord (the
@@ -557,7 +570,7 @@ try {
   # -PassThru plus WaitForExit(ms) gives a bound without a detached child and without Start-Job
   # (a second powershell process, which the termination discipline also discourages).
   function Invoke-Smoke([string]$sub) {
-    $p = Start-Process -FilePath 'node' -ArgumentList @('.phanes/scripts/cli.js', $sub) -NoNewWindow -PassThru
+    $p = Start-Process -FilePath 'node' -ArgumentList @('.phaneslight/scripts/cli.js', $sub) -NoNewWindow -PassThru
     # Touching .Handle caches the process handle in the .NET object. Without it, ExitCode comes
     # back EMPTY once the process has exited, because PowerShell has already released the
     # handle, and the failure message then reads "cli.js module-list exited " with no number.
@@ -592,7 +605,7 @@ Write-Output 'smoke: module-list OK, register-check OK'
 # provenance-failure paths (manifest-write missing, manifest-write nonzero, flag-back failure)
 # left that marker on disk with NO manifest beside it. The contract was repaired by moving the
 # code to match it, not by weakening the wording to match the code.
-$mwPath = Join-Path $root '.phanes\scripts\manifest-write.ps1'
+$mwPath = Join-Path $root '.phaneslight\scripts\manifest-write.ps1'
 if (-not (Test-Path -LiteralPath $mwPath)) { Fail 'manifest-write.ps1 is not in the installed set; provenance not recorded' }
 $mwOut = & $mwPath
 if ($LASTEXITCODE -ne 0) { Fail "manifest-write exited $LASTEXITCODE; provenance not recorded" }
@@ -633,7 +646,7 @@ if ($preserved.Count -gt 0) {
     [System.IO.File]::WriteAllText($manifestPath, ((ConvertTo-NodeJson $prov2 0) + "`n"), $UTF8_NO_BOM)
     Write-Output ("provenance: marked customized: $($preserved -join ', ')")
   } catch {
-    Fail "could not flag preserved files as customized in .phanes/manifest.json ($($_.Exception.Message))"
+    Fail "could not flag preserved files as customized in .phaneslight/manifest.json ($($_.Exception.Message))"
   }
 }
 if ($staleCustomizations.Count -gt 0) {
@@ -646,7 +659,7 @@ if ($staleCustomizations.Count -gt 0) {
 $tplBlock = [pscustomobject]@{ version = $ownVersion; source = 'fetched' }
 if ($cfg.PSObject.Properties.Match('templates').Count -gt 0) { $cfg.templates = $tplBlock }
 else { $cfg | Add-Member -NotePropertyName templates -NotePropertyValue $tplBlock }
-try { [System.IO.File]::WriteAllText((Join-Path $root '.phanes\config.json'), ((ConvertTo-NodeJson $cfg 0) + "`n"), $UTF8_NO_BOM) } catch { Fail "cannot write config templates block ($($_.Exception.Message))" }
+try { [System.IO.File]::WriteAllText((Join-Path $root '.phaneslight\config.json'), ((ConvertTo-NodeJson $cfg 0) + "`n"), $UTF8_NO_BOM) } catch { Fail "cannot write config templates block ($($_.Exception.Message))" }
 Write-Output ('config: templates block written {version: ' + $ownVersion + ', source: fetched}')
 
 try { Remove-Item -LiteralPath $staging -Recurse -Force } catch { }

@@ -1,20 +1,23 @@
 #!/bin/sh
-# phanes-template v3.4.1 new-file
+# phaneslight-template v3.6.1 new-file
 # Creates a file with the required header stamp. The only sanctioned way to create files.
-# Usage: phanes new-file <module> <path> "<description of at least five words>"
-# <module> may be a source module, tests, or docs. docs targets get the DOC DISCIPLINE header and
-# trigger a doc-index regeneration; source and tests targets get the module stamp in the project's
-# comment syntax (read from .phanes/config.json). Refuses a missing or too-short description.
+# Usage: phaneslight new-file <module> <path> "<description of at least five words>"
+# <module> may be a source module, tests, or docs. Header selection is by DESTINATION, not by the
+# module token (v3.6.1): any .md target resolving under the configured docRoot gets the DOC
+# DISCIPLINE header and triggers a doc-index regeneration, whatever module was named, and the
+# promotion is printed rather than applied silently. Everything else gets the module stamp in the
+# project's comment syntax (read from .phaneslight/config.json). Refuses a missing or too-short
+# description.
 
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 find_root() {
   d=$(pwd)
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "$d/.phanes/config.json" ] && { printf '%s' "$d"; return 0; }
+    [ -f "$d/.phaneslight/config.json" ] && { printf '%s' "$d"; return 0; }
     d=$(dirname "$d")
   done
-  [ -f "/.phanes/config.json" ] && { printf '%s' "/"; return 0; }
+  [ -f "/.phaneslight/config.json" ] && { printf '%s' "/"; return 0; }
   return 1
 }
 
@@ -66,7 +69,7 @@ normalize_path() { # normalize_path PATH -> lexically-normalized path (no filesy
 }
 
 if [ "$#" -lt 3 ]; then
-  echo 'new-file: usage: phanes new-file <module> <path> "<description of at least five words>"' >&2
+  echo 'new-file: usage: phaneslight new-file <module> <path> "<description of at least five words>"' >&2
   exit 1
 fi
 module=$1
@@ -80,7 +83,7 @@ if [ "$wordCount" -lt 5 ]; then
   exit 1
 fi
 
-root=$(find_root) || { echo "new-file: .phanes/config.json not found from this directory" >&2; exit 1; }
+root=$(find_root) || { echo "new-file: .phaneslight/config.json not found from this directory" >&2; exit 1; }
 
 # No honest default exists for any of the three values this config supplies: no default
 # commentSyntax (a wrong one is a syntax error in the target language), no default docRoot
@@ -88,20 +91,20 @@ root=$(find_root) || { echo "new-file: .phanes/config.json not found from this d
 # guard would silently switch off). Creating a file under a config that cannot be read is the
 # one case where refusing beats degrading. Matches new-file.ps1's refuse-on-unparseable.
 for k in commentSyntax docRoot modules; do
-  if cfg_key_bad "$k" "$root/.phanes/config.json"; then
-    echo "new-file: .phanes/config.json is malformed ('$k' present but unreadable). Refused." >&2
+  if cfg_key_bad "$k" "$root/.phaneslight/config.json"; then
+    echo "new-file: .phaneslight/config.json is malformed ('$k' present but unreadable). Refused." >&2
     exit 1
   fi
 done
 
-comment=$(cfg_str commentSyntax "$root/.phanes/config.json"); [ -z "$comment" ] && comment='//'
+comment=$(cfg_str commentSyntax "$root/.phaneslight/config.json"); [ -z "$comment" ] && comment='//'
 
-docRoot=$(cfg_str docRoot "$root/.phanes/config.json"); [ -z "$docRoot" ] && docRoot=documentation
+docRoot=$(cfg_str docRoot "$root/.phaneslight/config.json"); [ -z "$docRoot" ] && docRoot=documentation
 # A trailing slash in docRoot would otherwise leak into every derived path and message
 # (an empty basename, doubled separators, and absolute paths where relative ones belong).
 while [ "${docRoot%/}" != "$docRoot" ]; do docRoot=${docRoot%/}; done
 [ -z "$docRoot" ] && docRoot=documentation
-mods=$(cfg_arr modules "$root/.phanes/config.json")
+mods=$(cfg_arr modules "$root/.phaneslight/config.json")
 # Legal module names: any configured module, plus the two pseudo-modules (tests, docs).
 # When no module list is configured (missing or empty), there is nothing to validate a
 # source module name against, so the guard is skipped entirely rather than refusing every
@@ -147,17 +150,46 @@ case "$full" in
      exit 1 ;;
 esac
 
-# Containment check, docs only: must live under docRoot. A literal prefix match on the raw
-# path would be defeated by a relPath containing '..' (e.g. "documentation/../secrets/x.md"
-# textually starts with "$root/$docRoot/" even though it resolves outside it); both sides are
-# normalized so the comparison reflects where the path actually points.
-if [ "$module" = "docs" ]; then
-  docBase=$(normalize_path "$root/$docRoot")
-  case "$full" in
-    "$docBase"/*) : ;;
-    *) echo "new-file: docs target must live under '$docRoot/'. Got '$relPath'. Did you mean '$docRoot/$relPath'? Refused." >&2
-       exit 1 ;;
-  esac
+# Header selection is by DESTINATION, not by the module token (v3.6.1). The old test was
+# `[ "$module" = "docs" ]`, but no project's configured module list contains 'docs' -- `module-list`
+# prints the real modules -- so the natural call (`new-file <a real module> documentation/x.md`)
+# silently stamped a SOURCE comment onto a Markdown document, cost it the DOC DISCIPLINE block,
+# and put a `<module> | <desc>` line in _index.md where a description belongs. There is no signal
+# in the module token to fix that with; there is one in the path. A .md file under docRoot IS
+# documentation regardless of which module its author was thinking in.
+#
+# Both sides are normalized before comparison: a literal prefix match on the raw path would be
+# defeated by a relPath containing '..' (e.g. "documentation/../secrets/x.md" textually starts
+# with "$root/$docRoot/" even though it resolves outside it).
+docBase=$(normalize_path "$root/$docRoot")
+underDocRoot=0
+case "$full" in
+  "$docBase"/*) underDocRoot=1 ;;
+esac
+# .md only: the DOC header is an HTML comment, which is a syntax error in any other language.
+# A .c file under docRoot keeps its module stamp; an explicit `docs` module keeps the DOC header
+# whatever the extension, because an explicit request is not a guess to be second-guessed.
+isMarkdown=0
+case "$full" in
+  *.md|*.MD|*.Md|*.mD) isMarkdown=1 ;;
+esac
+isDocs=0
+[ "$module" = "docs" ] && isDocs=1
+[ "$underDocRoot" -eq 1 ] && [ "$isMarkdown" -eq 1 ] && isDocs=1
+
+# The docRoot containment refusal is about what the CALLER asked for: naming `docs` and pointing
+# outside docRoot is a mistake worth refusing. A source module pointed outside docRoot is not.
+if [ "$module" = "docs" ] && [ "$underDocRoot" -eq 0 ]; then
+  echo "new-file: docs target must live under '$docRoot/'. Got '$relPath'. Did you mean '$docRoot/$relPath'? Refused." >&2
+  exit 1
+fi
+
+# Promotion is never silent: the caller named a module, and the module token is about to be
+# ignored for header selection. Held until after the write so a later refusal cannot emit a
+# note about a file that was never created.
+promotionNote=
+if [ "$isDocs" -eq 1 ] && [ "$module" != "docs" ]; then
+  promotionNote="new-file: target is under '$docRoot/'; wrote the DOC header (module '$module' ignored for header selection)."
 fi
 
 # What to show the user: the normalized location relative to $root, i.e. where the bytes
@@ -178,24 +210,25 @@ mkdir -p "$(dirname "$full")"
 
 DASH=$(printf '\342\200\224')  # em dash, kept out of the source as bytes
 
-if [ "$module" = "docs" ]; then
+if [ "$isDocs" -eq 1 ]; then
   {
     printf '<!-- DOC | %s -->\n' "$description"
     printf '<!-- DOC DISCIPLINE | Soft ceiling: 500 lines. One topic per file; structure under ## headings.\n'
-    printf '     The DOC line above feeds `phanes doc-index` %s keep it accurate; it is this file'"'"'s line in _index.md.\n' "$DASH"
+    printf '     The DOC line above feeds `phaneslight doc-index` %s keep it accurate; it is this file'"'"'s line in _index.md.\n' "$DASH"
     printf '     If this file exceeds the ceiling: split it into a same-named folder of focused topic files;\n'
     printf '     carry both header lines into every part; update every inbound reference in the same change set;\n'
-    printf '     finish by running `phanes doc-index`.\n'
+    printf '     finish by running `phaneslight doc-index`.\n'
     printf '     Consumers: NEVER bulk-read documentation folders %s read _index.md first, load only what you need.\n' "$DASH"
     # Exactly one trailing LF after the header block, matching new-file.ps1 byte for byte.
-    printf '     Audit: `phanes doc-check`. -->\n'
+    printf '     Audit: `phaneslight doc-check`. -->\n'
   } > "$full"
+  [ -n "$promotionNote" ] && echo "$promotionNote"
   echo "new-file: created $displayPath (docs)"
   [ -f "$here/doc-index.sh" ] && sh "$here/doc-index.sh" >/dev/null 2>&1
 else
   {
     printf '%s %s | %s\n' "$comment" "$module" "$description"
-    printf '%s Soft size threshold: 500 LOC. Run `phanes loc-check` if uncertain.\n\n' "$comment"
+    printf '%s Soft size threshold: 500 LOC. Run `phaneslight loc-check` if uncertain.\n\n' "$comment"
   } > "$full"
   echo "new-file: created $displayPath ($module)"
 fi

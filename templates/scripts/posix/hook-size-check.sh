@@ -1,5 +1,5 @@
 #!/bin/sh
-# phanes-template v3.4.1 hook-size-check
+# phaneslight-template v3.6.1 hook-size-check
 # PostToolUse(Write|Edit) advisory. Reads the tool-call JSON from stdin and routes the touched file
 # to the matching audit: a hot file (root CLAUDE.md or CLAUDE.local.md) runs register-check; a
 # documentation file runs doc-index then doc-check; anything else runs loc-check on that file.
@@ -11,10 +11,10 @@ find_root_from() {
   d=$1
   [ -n "$d" ] || return 1
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "$d/.phanes/config.json" ] && { printf '%s' "$d"; return 0; }
+    [ -f "$d/.phaneslight/config.json" ] && { printf '%s' "$d"; return 0; }
     d=$(dirname "$d")
   done
-  [ -f "/.phanes/config.json" ] && { printf '%s' "/"; return 0; }
+  [ -f "/.phaneslight/config.json" ] && { printf '%s' "/"; return 0; }
   return 1
 }
 cfg_str() {
@@ -33,7 +33,7 @@ fp=$(printf '%s' "$raw" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' 
 
 start=$(dirname "$fp")
 root=$(find_root_from "$start") || root=$(find_root_from "$(pwd)") || exit 0
-docRoot=$(cfg_str docRoot "$root/.phanes/config.json"); [ -z "$docRoot" ] && docRoot=documentation
+docRoot=$(cfg_str docRoot "$root/.phaneslight/config.json"); [ -z "$docRoot" ] && docRoot=documentation
 # A trailing slash in docRoot would otherwise leak into every derived path and message
 # (an empty basename, doubled separators, and absolute paths where relative ones belong).
 while [ "${docRoot%/}" != "$docRoot" ]; do docRoot=${docRoot%/}; done
@@ -64,7 +64,7 @@ if [ -n "$out" ]; then
     [ -n "$line" ] || continue
     case "$line" in
       *'[OK]'|*': OK') : ;;
-      *) echo "[phanes size-check] $line" ;;
+      *) echo "[phaneslight size-check] $line" ;;
     esac
   done
 fi

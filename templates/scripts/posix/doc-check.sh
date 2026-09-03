@@ -1,5 +1,5 @@
 #!/bin/sh
-# phanes-template v3.4.1 doc-check
+# phaneslight-template v3.6.1 doc-check
 # Scans the documentation tree (archive/ excluded) for living documents over the 500-line ceiling
 # or missing a DOC header line, for folders holding docs but no _index.md, and for indexes older
 # than their newest sibling. Prints offenders with line counts. Frozen artifact classes (session
@@ -10,10 +10,10 @@ CEILING=500
 find_root() {
   d=$(pwd)
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "$d/.phanes/config.json" ] && { printf '%s' "$d"; return 0; }
+    [ -f "$d/.phaneslight/config.json" ] && { printf '%s' "$d"; return 0; }
     d=$(dirname "$d")
   done
-  [ -f "/.phanes/config.json" ] && { printf '%s' "/"; return 0; }
+  [ -f "/.phaneslight/config.json" ] && { printf '%s' "/"; return 0; }
   return 1
 }
 
@@ -52,8 +52,8 @@ is_listed() { # is_listed REL LIST
   done | grep -q hit
 }
 
-root=$(find_root) || { echo "doc-check: .phanes/config.json not found from this directory" >&2; exit 0; }
-docRoot=$(cfg_str docRoot "$root/.phanes/config.json"); [ -z "$docRoot" ] && docRoot=documentation
+root=$(find_root) || { echo "doc-check: .phaneslight/config.json not found from this directory" >&2; exit 0; }
+docRoot=$(cfg_str docRoot "$root/.phaneslight/config.json"); [ -z "$docRoot" ] && docRoot=documentation
 # A trailing slash in docRoot would otherwise leak into every derived path and message
 # (an empty basename, doubled separators, and absolute paths where relative ones belong).
 while [ "${docRoot%/}" != "$docRoot" ]; do docRoot=${docRoot%/}; done
@@ -61,8 +61,8 @@ while [ "${docRoot%/}" != "$docRoot" ]; do docRoot=${docRoot%/}; done
 docPath="$root/$docRoot"
 [ -d "$docPath" ] || { echo "doc-check: no documentation tree"; exit 0; }
 
-frozenlist=$(cfg_arr frozen_classes "$root/.phanes/config.json" | norm_entries "$docRoot")
-exclusions=$(cfg_arr index_exclusions "$root/.phanes/config.json" | norm_entries "$docRoot")
+frozenlist=$(cfg_arr frozen_classes "$root/.phaneslight/config.json" | norm_entries "$docRoot")
+exclusions=$(cfg_arr index_exclusions "$root/.phaneslight/config.json" | norm_entries "$docRoot")
 
 is_frozen() { # is_frozen REL
   rel=$1
@@ -117,7 +117,7 @@ find "$docPath" -type d ! -path '*/archive' ! -path '*/archive/*' | while IFS= r
   # stale: any child .md newer than the index?
   newer=$(find "$folder" -maxdepth 1 -type f -name '*.md' ! -name '_index.md' ! -name '_index_archive.md' -newer "$folder/_index.md" 2>/dev/null | grep -c .)
   if [ "$newer" -gt 0 ]; then
-    echo "STALE-INDEX: $rel/ (run phanes doc-index)"; bump
+    echo "STALE-INDEX: $rel/ (run phaneslight doc-index)"; bump
   fi
 done
 

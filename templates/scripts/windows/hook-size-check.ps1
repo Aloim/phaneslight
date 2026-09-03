@@ -1,15 +1,15 @@
-# phanes-template v3.4.1 hook-size-check
+# phaneslight-template v3.6.1 hook-size-check
 # PostToolUse(Write|Edit) advisory. Reads the tool-call JSON from stdin and routes the touched file
 # to the matching audit: a hot file (root CLAUDE.md or CLAUDE.local.md) runs register-check; a
 # documentation file runs doc-index then doc-check; anything else runs loc-check on that file.
 # Prints any warning into the transcript. Always exits 0.
 $ErrorActionPreference = 'Stop'
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   param([string]$start)
   $d = $start
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
@@ -28,11 +28,11 @@ try {
 
   $startDir = [System.IO.Path]::GetDirectoryName($fp)
   if (-not $startDir) { $startDir = (Get-Location).Path }
-  $root = Find-PhanesRoot $startDir
-  if (-not $root) { $root = Find-PhanesRoot (Get-Location).Path }
+  $root = Find-PhanesLightRoot $startDir
+  if (-not $root) { $root = Find-PhanesLightRoot (Get-Location).Path }
   if (-not $root) { exit 0 }
 
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
   $docRoot = 'documentation'
   if ($cfg.docRoot) { $docRoot = $cfg.docRoot }
   # A trailing slash in docRoot would otherwise leak into every derived path and message.
@@ -63,7 +63,7 @@ try {
   if ($out) {
     foreach ($line in $out) {
       if ($line -and $line -notmatch '\[OK\]\s*$' -and $line -notmatch ':\s*OK\s*$') {
-        Write-Output ("[phanes size-check] {0}" -f $line)
+        Write-Output ("[phaneslight size-check] {0}" -f $line)
       }
     }
   }

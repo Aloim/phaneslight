@@ -1,17 +1,17 @@
 #!/bin/sh
-# phanes-template v3.4.1 hook-stamp-guard
+# phaneslight-template v3.6.1 hook-stamp-guard
 # PreToolUse(Write) guard. Reads the tool-call JSON from stdin. Denies (exit 2) creation of a NEW
 # file under a stamped tree whose content lacks the required header stamp, so new files must go
-# through `phanes new-file`. Every other call passes (exit 0). Fails open on any parse trouble.
+# through `phaneslight new-file`. Every other call passes (exit 0). Fails open on any parse trouble.
 
 find_root_from() {
   d=$1
   [ -n "$d" ] || return 1
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "$d/.phanes/config.json" ] && { printf '%s' "$d"; return 0; }
+    [ -f "$d/.phaneslight/config.json" ] && { printf '%s' "$d"; return 0; }
     d=$(dirname "$d")
   done
-  [ -f "/.phanes/config.json" ] && { printf '%s' "/"; return 0; }
+  [ -f "/.phaneslight/config.json" ] && { printf '%s' "/"; return 0; }
   return 1
 }
 
@@ -46,7 +46,7 @@ case "$fp" in
   *) exit 0 ;;
 esac
 
-cfgfile="$root/.phanes/config.json"
+cfgfile="$root/.phaneslight/config.json"
 stamped="src tests documentation"
 docRoot=$(cfg_str docRoot "$cfgfile")
 while [ "${docRoot%/}" != "$docRoot" ]; do docRoot=${docRoot%/}; done
@@ -68,5 +68,5 @@ printf '%s' "$raw" | grep -q 'Soft size threshold: 500 LOC' && exit 0
 printf '%s' "$raw" | grep -q '<!-- DOC |' && exit 0
 
 DASH=$(printf '\342\200\224')
-printf 'New files must be created via `phanes new-file` %s the stamp is what `regen-registry` slices modules by; bypassing it produces silent API-baseline drift.\n' "$DASH" >&2
+printf 'New files must be created via `phaneslight new-file` %s the stamp is what `regen-registry` slices modules by; bypassing it produces silent API-baseline drift.\n' "$DASH" >&2
 exit 2

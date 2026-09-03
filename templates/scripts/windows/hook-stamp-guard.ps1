@@ -1,16 +1,16 @@
-# phanes-template v3.4.1 hook-stamp-guard
+# phaneslight-template v3.6.1 hook-stamp-guard
 # PreToolUse(Write) guard. Reads the tool-call JSON from stdin. Denies (exit 2) creation of a NEW
 # file under a stamped tree whose content lacks the required header stamp, so new files must go
-# through `phanes new-file`. Every other call passes (exit 0). Fails open on tool-call JSON or IO
-# trouble; a malformed .phanes/config.json instead falls back to the default stamped-tree list and
+# through `phaneslight new-file`. Every other call passes (exit 0). Fails open on tool-call JSON or IO
+# trouble; a malformed .phaneslight/config.json instead falls back to the default stamped-tree list and
 # says so on stderr, so the guard stays live and audible rather than silently switching off.
 $ErrorActionPreference = 'Stop'
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   param([string]$start)
   $d = $start
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
@@ -35,8 +35,8 @@ try {
   $startDir = [System.IO.Path]::GetDirectoryName($fp)
   if (-not $startDir) { $startDir = (Get-Location).Path }
   # Walk up from the file location, or the current directory, to locate the project root.
-  $root = Find-PhanesRoot $startDir
-  if (-not $root) { $root = Find-PhanesRoot (Get-Location).Path }
+  $root = Find-PhanesLightRoot $startDir
+  if (-not $root) { $root = Find-PhanesLightRoot (Get-Location).Path }
   if (-not $root) { exit 0 }
 
   $rootNorm = ((Resolve-Path -LiteralPath $root).Path -replace '\\', '/').TrimEnd('/')
@@ -46,17 +46,17 @@ try {
 
   $stamped = @('src', 'tests', 'documentation')
   try {
-    $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
     if ($cfg.stampedTrees) { $stamped = $cfg.stampedTrees }
     if ($cfg.docRoot) { $stamped += ([string]$cfg.docRoot).TrimEnd('/', '\') }
     if ($cfg.modules) { $stamped += $cfg.modules }
   } catch {
-    # This is the PreToolUse gate that makes `phanes new-file` mandatory; a malformed config must
+    # This is the PreToolUse gate that makes `phaneslight new-file` mandatory; a malformed config must
     # not silently switch it off. Fall back to the default stamped-tree list and say so on stderr,
     # so the failure is visible rather than a quiet no-op. Caught here, inside the guard's own
     # logic, so the outer catch's fail-open exit 0 below never swallows this specific case; the
     # guard still runs, against the default list, and stays live and audible on both platforms.
-    [Console]::Error.WriteLine('hook-stamp-guard: .phanes/config.json is malformed, using default stamped trees (src, tests, documentation)')
+    [Console]::Error.WriteLine('hook-stamp-guard: .phaneslight/config.json is malformed, using default stamped trees (src, tests, documentation)')
   }
 
   $guarded = $false
@@ -71,7 +71,7 @@ try {
   $hasDoc = $content -match '<!--\s*DOC\s*\|'
   if ($hasSource -or $hasDoc) { exit 0 }
 
-  [Console]::Error.WriteLine("New files must be created via ``phanes new-file`` $([char]0x2014) the stamp is what ``regen-registry`` slices modules by; bypassing it produces silent API-baseline drift.")
+  [Console]::Error.WriteLine("New files must be created via ``phaneslight new-file`` $([char]0x2014) the stamp is what ``regen-registry`` slices modules by; bypassing it produces silent API-baseline drift.")
   exit 2
 } catch {
   # Never wedge the session on a parse or IO error.

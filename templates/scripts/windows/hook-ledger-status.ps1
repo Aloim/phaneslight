@@ -1,4 +1,4 @@
-# phanes-template v3.4.1 hook-ledger-status
+# phaneslight-template v3.6.1 hook-ledger-status
 # SessionStart hook. Prints NOTHING when the run-progress ledger is closed or absent; prints
 # exactly one line when a prior run died mid-flight, so the session opens knowing it must ask
 # the user: resume, or start fresh (ledger reset). The ASKING stays in the session; this hook
@@ -22,7 +22,7 @@ $MAX_LINE = 300
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -36,7 +36,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -55,14 +55,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -83,7 +83,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -115,7 +115,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -164,7 +164,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -195,9 +195,9 @@ try {
   # Drain the SessionStart payload; this hook decides from disk state, not from the payload.
   [void][Console]::In.ReadToEnd()
 
-  $root = Find-PhanesRoot
+  $root = Find-PhanesLightRoot
   if (-not $root) { exit 0 }
-  $ledgerFile = Join-Path $root '.phanes\run-progress'
+  $ledgerFile = Join-Path $root '.phaneslight\run-progress'
 
   # HK-2 repair. The draft read the ledger with a bare Get-Content inside the outer catch, so a
   # ledger that EXISTED but could not be read (exclusive lock, denied ACL, a directory in its
@@ -205,10 +205,10 @@ try {
   # signal. That is false-healthy on exactly the state this hook exists to surface: silence
   # here tells the session there is no unfinished run to ask about. An unreadable ledger is
   # reported, in one line, like every other thing this hook has to say.
-  $lg = Read-PhanesTextFile $ledgerFile
+  $lg = Read-PhanesLightTextFile $ledgerFile
   if ($lg.Status -ceq 'absent') { exit 0 }
   if ($lg.Status -cne 'ok') {
-    Write-Output 'phanes: a run-progress ledger exists but could not be read, so it is unknown whether a prior run finished. Ask the user before starting work.'
+    Write-Output 'phaneslight: a run-progress ledger exists but could not be read, so it is unknown whether a prior run finished. Ask the user before starting work.'
     exit 0
   }
 
@@ -223,14 +223,14 @@ try {
   if ($last.Length -gt $MAX_LINE) { $last = $last.Substring(0, $MAX_LINE) + ' [line truncated]' }
 
   # Unclosed. Run type from the marker: '0' = a setup run died; any other value = an update
-  # run died; a MISSING marker beside an existing ledger is the phanes.md anomaly case and is
+  # run died; a MISSING marker beside an existing ledger is the phaneslight.md anomaly case and is
   # treated as an update, matching the spec's own rule.
   $runType = 'update'
-  $marker = Join-Path $root '.claude\.phanes'
+  $marker = Join-Path $root '.claude\.phaneslight'
   if (Test-Path -LiteralPath $marker) {
     try { if ((Get-Content -LiteralPath $marker -Raw -Encoding utf8).Trim() -ceq '0') { $runType = 'setup' } } catch { }
   }
-  Write-Output ("phanes: unfinished $runType run found, last completed: $last. Ask the user: resume from the next phase, or start fresh (ledger reset)?")
+  Write-Output ("phaneslight: unfinished $runType run found, last completed: $last. Ask the user: resume from the next phase, or start fresh (ledger reset)?")
   exit 0
 } catch {
   # Never wedge a session start on ledger trouble.

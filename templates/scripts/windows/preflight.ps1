@@ -1,9 +1,9 @@
-# phanes-template v3.4.1 preflight
+# phaneslight-template v3.6.1 preflight
 # Phase 0 mechanical pre-flights, observed and reported, NEVER acted on: run-type marker,
 # installed version, upstream stamp (network-tolerant, 10s timeout, single attempt), the four
 # standard MCP servers via `claude mcp list`, platform, capability-census counts, and the
 # legacy-migration signals. Emits ONE digest JSON. Consent, AskUserQuestion, MCP installs, the
-# STOP-and-route-to-phanesupgrade judgment, and every other decision stay in the session: this
+# STOP-and-route-to-phaneslightupgrade judgment, and every other decision stay in the session: this
 # script observes and never mutates anything. Advisory: always exits 0.
 $ErrorActionPreference = 'Stop'
 $CAP = 20
@@ -17,7 +17,7 @@ $CAP = 20
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -31,7 +31,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -50,14 +50,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -78,7 +78,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -110,7 +110,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -159,7 +159,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -261,7 +261,7 @@ function ConvertTo-NodeJson($value, [int]$indent) {
 # BEGIN SHARED looseroot
 
 # The loose root, for preflight and preflight only: the one command that must also run against
-# a project Phanes has NOT bootstrapped yet, where no .phanes/config.json exists. Strict root
+# a project PhanesLight has NOT bootstrapped yet, where no .phaneslight/config.json exists. Strict root
 # first, then a BOUNDED walk for a .claude directory, then the current directory.
 #
 # The walk is bounded because the unbounded version was the worst single defect in this set: it
@@ -299,11 +299,11 @@ function ConvertTo-NodeJson($value, [int]$indent) {
 # session does the judging. A root reached by guessing is something the caller is entitled to
 # know about before it acts on a census taken there; the draft returned a bare path, which is
 # precisely why a mis-root was indistinguishable from a correct root in the output.
-function Find-PhanesRootLoose {
-  $strict = Find-PhanesRoot
+function Find-PhanesLightRootLoose {
+  $strict = Find-PhanesLightRoot
   if ($strict) { return @{ Root = $strict; Source = 'config'; StoppedBy = $null } }
-  $homeDir = Get-PhanesHomeDirectory
-  $start = Get-PhanesStartDirectory
+  $homeDir = Get-PhanesLightHomeDirectory
+  $start = Get-PhanesLightStartDirectory
   $cwd = $null
   if ($null -ne $start) { $cwd = $start.FullName }
   $d = $start
@@ -344,18 +344,18 @@ function Find-PhanesRootLoose {
 # --- REMOVED 2026-08-05: the local ConvertTo-JsonStringLiteral / ConvertTo-NodeJson pair and
 # --- the local Find-Root now live in the shared regions above. The emitter was one of five
 # --- byte-identical copies in two clusters, and Find-Root was the single hand-modified copy of
-# --- Find-PhanesRoot in the whole set, which is exactly the copy that carried the mis-root
+# --- Find-PhanesLightRoot in the whole set, which is exactly the copy that carried the mis-root
 # --- defect. Both are now stated once, in Task 0 Step 1.
 # Root discovery is looser than the other scripts on purpose: preflight is the one command that
-# must also run against a project Phanes has NOT fully bootstrapped (partial installs, the
-# anomaly case). Find-PhanesRootLoose reports HOW it chose as well as what it chose, and that
+# must also run against a project PhanesLight has NOT fully bootstrapped (partial installs, the
+# anomaly case). Find-PhanesLightRootLoose reports HOW it chose as well as what it chose, and that
 # is surfaced in the JSON below: an observe-only sensor that had to guess its own root must say
 # so, or the session cannot tell a real census from a census of the wrong tree.
-$rootInfo = Find-PhanesRootLoose
+$rootInfo = Find-PhanesLightRootLoose
 $root = $rootInfo.Root
 if (-not $root) { $root = '.' }
 
-# --- marker and run type (phanes.md: "The .claude/.phanes marker file is the SOLE authority
+# --- marker and run type (phaneslight.md: "The .claude/.phaneslight marker file is the SOLE authority
 # --- on install state"; the anomaly rule is applied by the SESSION, this only reports it)
 #
 # B4 repair, and this is the most consequential single fix in the script. The draft caught the
@@ -367,50 +367,77 @@ if (-not $root) { $root = '.' }
 # with an absent marker.
 $marker = $null
 $markerReadable = $true
-$markerPath = Join-Path $root '.claude\.phanes'
-$mk = Read-PhanesTextFile $markerPath
+$markerPath = Join-Path $root '.claude\.phaneslight'
+$mk = Read-PhanesLightTextFile $markerPath
 if ($mk.Status -ceq 'ok') { $marker = ([string]$mk.Text).Trim() }
 elseif ($mk.Status -cne 'absent') {
   $markerReadable = $false
-  [Console]::Error.WriteLine("preflight: the .claude/.phanes marker exists but could not be read; install state is UNKNOWN, not fresh")
+  [Console]::Error.WriteLine("preflight: the .claude/.phaneslight marker exists but could not be read; install state is UNKNOWN, not fresh")
 }
 
-# --- installed version from .phanes/config.json (guarded; malformed reads as null, and the
+# LEGACY-NAME-BLOCK BEGIN
+# A pre-v3.6.0 install carries its marker under the old name. Read it as the marker rather
+# than inventing a fourth runType: the existing `$null -ne $marker` branch below then
+# resolves this to 'update', which is what it is, and 'anomaly' becomes unreachable for a
+# healthy legacy install. Nothing downstream needs to learn a new value.
+$legacyNaming = $false
+if ($null -eq $marker -and $mk.Status -cne 'unreadable') {
+  $legacyMarker = Read-PhanesLightTextFile (Join-Path $root '.claude\.phanes')
+  if ($legacyMarker.Status -ceq 'ok') {
+    $marker = ([string]$legacyMarker.Text).Trim()
+    $legacyNaming = $true
+  }
+  elseif (Test-Path -LiteralPath (Join-Path $root '.phanes\config.json')) {
+    $legacyNaming = $true
+  }
+}
+# LEGACY-NAME-BLOCK END
+
+# --- installed version from .phaneslight/config.json (guarded; malformed reads as null, and the
 # --- three failure states stay distinct for the same reason the marker's do)
 $cfg = $null
 $installedVersion = $null
 $docRoot = 'documentation'
 $configReadable = $true
-$cfgPath = Join-Path $root '.phanes\config.json'
-$cfgRead = Read-PhanesJsonFile $cfgPath
+$cfgPath = Join-Path $root '.phaneslight\config.json'
+$cfgRead = Read-PhanesLightJsonFile $cfgPath
 if ($cfgRead.Status -ceq 'ok') { $cfg = $cfgRead.Value }
 elseif ($cfgRead.Status -cne 'absent') { $configReadable = $false }
 if ($null -ne $cfg) {
-  if ($cfg.phanesVersion -is [string]) { $installedVersion = $cfg.phanesVersion }
+  if ($cfg.phanesLightVersion -is [string]) { $installedVersion = $cfg.phanesLightVersion }
   if ($cfg.docRoot -is [string] -and ([string]$cfg.docRoot).Trim() -cne '') { $docRoot = ([string]$cfg.docRoot).Trim().TrimEnd('/', '\') }
 }
 
+# LEGACY-NAME-BLOCK BEGIN
+if ($null -eq $installedVersion -and $legacyNaming) {
+  try {
+    $lcfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    if ($lcfg.phanesVersion -is [string]) { $installedVersion = $lcfg.phanesVersion }
+  } catch { }
+}
+# LEGACY-NAME-BLOCK END
+
 # N3 repair. runType is decided from the marker, which is the spec's sole authority, and the
 # anomaly branch exists for the partial-bootstrap case: marker absent but project furniture
-# present. The draft tested only whether `.phanes` EXISTS, and after a successful full-chain
-# install `.phanes` always exists, so a healthy fresh install reported `anomaly`. The branch
+# present. The draft tested only whether `.phaneslight` EXISTS, and after a successful full-chain
+# install `.phaneslight` always exists, so a healthy fresh install reported `anomaly`. The branch
 # now requires the furniture to be present AND the marker to be genuinely absent rather than
-# merely unread, which is what the phanes.md rule actually describes.
+# merely unread, which is what the phaneslight.md rule actually describes.
 $runType = 'setup'
 if (-not $markerReadable) { $runType = 'unknown' }
 elseif ($null -ne $marker) { $runType = 'update' }
-elseif ((Test-Path -LiteralPath (Join-Path $root '.phanes\config.json')) -or (Test-Path -LiteralPath (Join-Path (Join-Path $root $docRoot) 'session-summaries'))) { $runType = 'anomaly' }
+elseif ((Test-Path -LiteralPath (Join-Path $root '.phaneslight\config.json')) -or (Test-Path -LiteralPath (Join-Path (Join-Path $root $docRoot) 'session-summaries'))) { $runType = 'anomaly' }
 
 # --- upstream stamp (network-tolerant: single attempt, 10 second timeout, sanity-checked;
 # --- every failure shape degrades to null, never to a stop)
 $upstream = $null
-$tmp = Join-Path $env:TEMP ("phanes-upstream-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+$tmp = Join-Path $env:TEMP ("phaneslight-upstream-" + [System.Guid]::NewGuid().ToString('N') + ".md")
 try {
   try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
-  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Aloim/phanes/main/phanes.md' -OutFile $tmp -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Aloim/phaneslight/main/phaneslight.md' -OutFile $tmp -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
   $line1 = Get-Content -LiteralPath $tmp -TotalCount 1 -Encoding utf8
-  if ($line1 -is [string] -and $line1.StartsWith('<!-- Phanes v', [System.StringComparison]::Ordinal)) {
-    $m = [regex]::Match($line1, 'Phanes v(\d+\.\d+(?:\.\d+)?)')
+  if ($line1 -is [string] -and $line1.StartsWith('<!-- PhanesLight v', [System.StringComparison]::Ordinal)) {
+    $m = [regex]::Match($line1, 'PhanesLight v(\d+\.\d+(?:\.\d+)?)')
     if ($m.Success) { $upstream = $m.Groups[1].Value }
   }
 } catch {
@@ -480,11 +507,11 @@ function Count-Dirs([string]$dir) {
 
 # B2 repair: never Join-Path onto $env:USERPROFILE directly. With USERPROFILE unset that raises
 # a TERMINATING error under EAP-Stop, so this script, which is contractually bound to always
-# exit 0 and always emit one JSON digest, exited 1 with no output at all. Get-PhanesHomeDirectory
+# exit 0 and always emit one JSON digest, exited 1 with no output at all. Get-PhanesLightHomeDirectory
 # resolves the home directory through three candidates and returns $null rather than throwing;
 # a $null home degrades the two user-scoped counts to could-not-observe, which is the honest
 # answer and the same shape B8 uses.
-$userHome = Get-PhanesHomeDirectory
+$userHome = Get-PhanesLightHomeDirectory
 $userClaude = $null
 if ($userHome) { $userClaude = Join-Path $userHome '.claude' }
 $agentFiles = @()
@@ -520,10 +547,10 @@ $censusCounts = [ordered]@{
   mcpServers = $mcpServerCount
 }
 
-# --- legacy-migration signals (phanes.md: "no phanesVersion in .phanes/config.json and no
+# --- legacy-migration signals (phaneslight.md: "no phanesLightVersion in .phaneslight/config.json and no
 # --- version stamp anywhere; agents referencing sequential-thinking or an MCP memory server;
 # --- ... per-subfolder CLAUDE.md sprawl; ... unprefixed template-shaped agents"). Signals
-# --- only; the STOP-and-route-to-phanesupgrade judgment stays in the session.
+# --- only; the STOP-and-route-to-phaneslightupgrade judgment stays in the session.
 $archetypes = @('executor', 'critic', 'planner', 'architect', 'designer', 'cleaner', 'synthesizer', 'close-verifier', 'scout', 'orchestrator', 'researcher', 'patch-author')
 $unprefixed = New-Object System.Collections.ArrayList
 $seqRefs = New-Object System.Collections.ArrayList
@@ -562,6 +589,7 @@ $legacyMarkers = [ordered]@{
 $digest = [ordered]@{
   runType = $runType
   marker = $marker
+  legacyNaming = $legacyNaming
   markerReadable = $markerReadable
   configReadable = $configReadable
   rootSource = $rootInfo.Source

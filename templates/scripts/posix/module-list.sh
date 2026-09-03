@@ -1,14 +1,18 @@
 #!/bin/sh
-# phanes-template v3.4.1 module-list
-# Prints the configured module list, one per line, read from .phanes/config.json.
+# phaneslight-template v3.6.1 module-list
+# Prints the configured module list, one per line, read from .phaneslight/config.json.
+# With --all, additionally prints the two pseudo-modules `new-file` accepts (tests, docs), which
+# the config never carries. Default output is UNCHANGED and stays exactly the configured list:
+# `update-preflight`'s modules sensor compares it line-for-line against config.modules, so a
+# pseudo-module on the default path would read as a permanent drift verdict.
 
 find_root() {
   d=$(pwd)
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "$d/.phanes/config.json" ] && { printf '%s' "$d"; return 0; }
+    [ -f "$d/.phaneslight/config.json" ] && { printf '%s' "$d"; return 0; }
     d=$(dirname "$d")
   done
-  [ -f "/.phanes/config.json" ] && { printf '%s' "/"; return 0; }
+  [ -f "/.phaneslight/config.json" ] && { printf '%s' "/"; return 0; }
   return 1
 }
 
@@ -42,18 +46,28 @@ cfg_key_bad() {
   return 0
 }
 
-root=$(find_root) || { echo "module-list: .phanes/config.json not found from this directory" >&2; exit 1; }
+root=$(find_root) || { echo "module-list: .phaneslight/config.json not found from this directory" >&2; exit 1; }
 # Unlike new-file (where "no restriction" is a coherent fallback), there is no honest default
 # module list to print: "(no modules configured)" would claim the project has none, when the
 # truth is the config could not be read. Report the parse failure and refuse, matching Windows.
-if cfg_key_bad modules "$root/.phanes/config.json"; then
-  echo "module-list: .phanes/config.json is malformed, cannot list modules" >&2
+if cfg_key_bad modules "$root/.phaneslight/config.json"; then
+  echo "module-list: .phaneslight/config.json is malformed, cannot list modules" >&2
   exit 1
 fi
-mods=$(cfg_arr modules "$root/.phanes/config.json")
+showAll=0
+[ "$1" = "--all" ] && showAll=1
+
+mods=$(cfg_arr modules "$root/.phaneslight/config.json")
 if [ -z "$mods" ]; then
   echo "(no modules configured)"
-  exit 0
+else
+  printf '%s\n' "$mods"
 fi
-printf '%s\n' "$mods"
+if [ "$showAll" -eq 1 ]; then
+  # The two names `new-file` accepts that no config lists. They live here so the answer to "what
+  # may I pass as <module>?" is reachable from the command that claims to answer it, rather than
+  # only from new-file's refusal message.
+  echo "tests"
+  echo "docs"
+fi
 exit 0

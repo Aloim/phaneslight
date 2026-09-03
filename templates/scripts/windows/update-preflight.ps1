@@ -1,4 +1,4 @@
-# phanes-template v3.4.1 update-preflight
+# phaneslight-template v3.6.1 update-preflight
 # The update-run fast-path aggregator: runs the sensors (census-diff, hook table, register
 # breach state, manifest sha256 drift, module-list vs config, optional spec-version compare)
 # and the git delta, and emits ONE JSON verdict {sensors, quiet, gitDelta}. quiet is true only
@@ -22,7 +22,7 @@ $CAP = 100
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -36,7 +36,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -55,14 +55,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -83,7 +83,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -115,7 +115,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -164,7 +164,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -273,7 +273,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
   elseif ($a -ceq '--spec-version') {
     # M5 repair, and SS00028's field investigation sharpened this well beyond its recorded
     # severity. This flag IS the new-spec-versus-old-scripts skew sensor, and skew is the NORMAL
-    # state of every untouched project after a release: phanes.md propagates globally and
+    # state of every untouched project after a release: phaneslight.md propagates globally and
     # instantly from ~/.claude/commands, while scripts propagate to a project only when someone
     # runs an update there. The draft exited 0 printing NOTHING when the flag carried no value,
     # which a caller parses as null and reads as "no skew". A sensor whose whole job is catching
@@ -288,14 +288,14 @@ for ($i = 0; $i -lt $args.Count; $i++) {
   else { [Console]::Error.WriteLine("update-preflight: unknown argument '$a' ignored") }
 }
 
-$root = Find-PhanesRoot
+$root = Find-PhanesLightRoot
 if (-not $root) {
-  [Console]::Error.WriteLine('update-preflight: .phanes/config.json not found from this directory')
+  [Console]::Error.WriteLine('update-preflight: .phaneslight/config.json not found from this directory')
   Write-Output (ConvertTo-NodeJson ([ordered]@{ sensors = [ordered]@{}; quiet = $false; gitDelta = [ordered]@{ available = $false; reason = 'no project root' } }) 0)
   exit 0
 }
 
-$cfgRead = Read-PhanesJsonFile (Join-Path $root '.phanes\config.json')
+$cfgRead = Read-PhanesLightJsonFile (Join-Path $root '.phaneslight\config.json')
 $cfg = $cfgRead.Value
 $cfgOk = ($cfgRead.Status -ceq 'ok')
 
@@ -311,7 +311,7 @@ function Get-HooksSensor {
   # available with delta true from the per-hook loop below. Unreadable and malformed are both
   # could-not-observe and now report identically.
   $settings = $null
-  $sr = Read-PhanesJsonFile $settingsPath
+  $sr = Read-PhanesLightJsonFile $settingsPath
   if ($sr.Status -ceq 'ok') { $settings = $sr.Value }
   elseif ($sr.Status -cne 'absent') {
     $sensor.available = $false; $sensor.delta = $true
@@ -336,8 +336,8 @@ function Get-HooksSensor {
     }
     if ($null -ne $cmd) {
       $entry.present = $true
-      $entry.pathDiscipline = (($cmd.IndexOf('.phanes/scripts/', [System.StringComparison]::Ordinal) -ge 0) -and -not ($cmd -match '(?i)[a-z]:[\\/]') -and -not ($cmd -match '(^|\s)/'))
-      $entry.scriptExists = (Test-Path -LiteralPath (Join-Path $script:root ('.phanes\scripts\' + $w.needle + '.ps1')))
+      $entry.pathDiscipline = (($cmd.IndexOf('.phaneslight/scripts/', [System.StringComparison]::Ordinal) -ge 0) -and -not ($cmd -match '(?i)[a-z]:[\\/]') -and -not ($cmd -match '(^|\s)/'))
+      $entry.scriptExists = (Test-Path -LiteralPath (Join-Path $script:root ('.phaneslight\scripts\' + $w.needle + '.ps1')))
     }
     if (-not ($entry.present -and $entry.pathDiscipline -and $entry.scriptExists)) { $sensor.delta = $true }
     $sensor[$w.key] = $entry
@@ -366,7 +366,18 @@ if ($specVersionMissing) {
 }
 elseif ($null -ne $specVersion) {
   $spec = [ordered]@{ available = $true; delta = $false; spec = $specVersion; installed = $null }
-  if ($cfgOk -and ($cfg.phanesVersion -is [string])) { $spec.installed = $cfg.phanesVersion }
+  if ($cfgOk -and ($cfg.phanesLightVersion -is [string])) { $spec.installed = $cfg.phanesLightVersion }
+  # LEGACY-NAME-BLOCK BEGIN
+  # A pre-v3.6.0 install still carries phanesVersion in .phanes/config.json. Without this the
+  # fast-path aggregator reports a null installed version on every legacy-named install, its
+  # delta is permanently true, and every update run pays for a full preflight it did not need.
+  if ($spec.installed -isnot [string]) {
+    try {
+      $lcfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+      if ($lcfg.phanesVersion -is [string]) { $spec.installed = $lcfg.phanesVersion }
+    } catch { }
+  }
+  # LEGACY-NAME-BLOCK END
   if ($spec.installed -isnot [string] -or ($spec.installed -cne $specVersion)) { $spec.delta = $true }
 }
 $sensors.spec = $spec
@@ -419,9 +430,9 @@ $sensors.register = $register
 
 # ---------- manifest drift sensor ----------
 $manifest = [ordered]@{ available = $false; delta = $true }
-$manifestPath = Join-Path $root '.phanes\manifest.json'
+$manifestPath = Join-Path $root '.phaneslight\manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) {
-  $manifest.reason = '.phanes/manifest.json absent (provenance unknown; pre-v3.4 install or incomplete run)'
+  $manifest.reason = '.phaneslight/manifest.json absent (provenance unknown; pre-v3.4 install or incomplete run)'
 } else {
   try {
     $prov = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json
@@ -447,7 +458,7 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
     $manifest.missing = @($missingArr | Select-Object -First $CAP)
     $manifest.listTruncated = ($driftedArr.Count -gt $CAP -or $missingArr.Count -gt $CAP)
   } catch {
-    $manifest.reason = '.phanes/manifest.json is malformed'
+    $manifest.reason = '.phaneslight/manifest.json is malformed'
   }
 }
 $sensors.manifest = $manifest
@@ -488,7 +499,7 @@ $sensors.modules = $modules
 # feeding it into quiet would make those projects non-quiet forever and destroy the fast path
 # this whole workstream exists to build. This sensor informs; it does not gate.
 $customizations = [ordered]@{ available = $false; count = 0; unknownCount = 0; entries = @(); listTruncated = $false }
-$mfRead = Read-PhanesJsonFile (Join-Path $root '.phanes\manifest.json') 'artifacts'
+$mfRead = Read-PhanesLightJsonFile (Join-Path $root '.phaneslight\manifest.json') 'artifacts'
 if ($mfRead.Status -ceq 'ok') {
   $customizations.available = $true
   $rows = New-Object System.Collections.ArrayList

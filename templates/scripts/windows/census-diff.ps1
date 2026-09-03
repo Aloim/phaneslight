@@ -1,7 +1,7 @@
-# phanes-template v3.4.1 census-diff
+# phaneslight-template v3.6.1 census-diff
 # Re-enumerates the disk-visible capability surfaces (MCP servers via `claude mcp list`,
 # plugins, skills, commands) and diffs them against capabilities.selection[] recorded in
-# .phanes/config.json, mechanizing the update-run "diff, don't re-ask" duty. Prints a digest
+# .phaneslight/config.json, mechanizing the update-run "diff, don't re-ask" duty. Prints a digest
 # JSON: added (detected, not in selection), removed (in selection, no longer detected),
 # changed (an MCP server whose connected state differs from the recorded authOk). The ASKING
 # about deltas stays in the session. A failed `claude mcp list` degrades that one surface
@@ -19,7 +19,7 @@ $CAP = 100
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -33,7 +33,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -52,14 +52,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -80,7 +80,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -112,7 +112,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -161,7 +161,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -273,9 +273,9 @@ $report = [ordered]@{
 }
 function Write-ReportAndExit { Write-Output (ConvertTo-NodeJson $report 0); exit 0 }
 
-$root = Find-PhanesRoot
+$root = Find-PhanesLightRoot
 if (-not $root) {
-  [Console]::Error.WriteLine('census-diff: .phanes/config.json not found from this directory')
+  [Console]::Error.WriteLine('census-diff: .phaneslight/config.json not found from this directory')
   Write-ReportAndExit
 }
 
@@ -283,14 +283,14 @@ if (-not $root) {
 # flagged; it never reads as "everything was removed".
 $selection = @()
 try {
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
   if ($cfg.capabilities -and $cfg.capabilities.selection) {
     $selection = @($cfg.capabilities.selection)
     $report.selectionPresent = $true
   }
 } catch {
   $report.configUntrusted = $true
-  [Console]::Error.WriteLine('census-diff: .phanes/config.json is malformed; no diff computed, nothing reported as removed')
+  [Console]::Error.WriteLine('census-diff: .phaneslight/config.json is malformed; no diff computed, nothing reported as removed')
   Write-ReportAndExit
 }
 
@@ -332,7 +332,7 @@ if ($null -ne $mcpRaw) {
 
 # B2 repair, same as preflight: never Join-Path onto $env:USERPROFILE, which raises a
 # terminating error under EAP-Stop when the variable is unset, from a script bound to exit 0.
-$userHome = Get-PhanesHomeDirectory
+$userHome = Get-PhanesLightHomeDirectory
 $userClaude = $null
 if ($userHome) { $userClaude = Join-Path $userHome '.claude' }
 

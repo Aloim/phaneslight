@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// phanes-template v3.4.1 cli
-// Cross-shell entry point: `node .phanes/scripts/cli.js <subcommand> [args]` resolves identically
+// phaneslight-template v3.6.1 cli
+// Cross-shell entry point: `node .phaneslight/scripts/cli.js <subcommand> [args]` resolves identically
 // in PowerShell, cmd, and Git Bash, so agents never depend on PATH or a shell-specific launcher.
-// It forwards to the platform dispatcher sibling (phanes.ps1 on Windows, the POSIX `phanes`
+// It forwards to the platform dispatcher sibling (phaneslight.ps1 on Windows, the POSIX `phaneslight`
 // elsewhere), which owns all subcommand routing: one source of truth, no duplicated dispatch logic.
 'use strict';
 
@@ -17,15 +17,15 @@ let cmd;
 let cmdArgs;
 if (isWindows) {
   cmd = 'powershell';
-  cmdArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(here, 'phanes.ps1'), ...args];
+  cmdArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(here, 'phaneslight.ps1'), ...args];
 } else {
   cmd = 'sh';
-  cmdArgs = [path.join(here, 'phanes'), ...args];
+  cmdArgs = [path.join(here, 'phaneslight'), ...args];
 }
 
 const result = spawnSync(cmd, cmdArgs, { stdio: 'inherit' });
 if (result.error) {
-  process.stderr.write('cli.js: failed to launch the phanes dispatcher (' + result.error.message + ')\n');
+  process.stderr.write('cli.js: failed to launch the phaneslight dispatcher (' + result.error.message + ')\n');
   process.exit(1);
 }
 process.exit(result.status === null ? 1 : result.status);

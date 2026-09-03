@@ -1,15 +1,18 @@
-# phanes-template v3.4.1 new-file
+# phaneslight-template v3.6.1 new-file
 # Creates a file with the required header stamp. The only sanctioned way to create files.
-# Usage: phanes new-file <module> <path> "<description of at least five words>"
-# <module> may be a source module, tests, or docs. docs targets get the DOC DISCIPLINE header and
-# trigger a doc-index regeneration; source and tests targets get the module stamp in the project's
-# comment syntax (read from .phanes/config.json). Refuses a missing or too-short description.
+# Usage: phaneslight new-file <module> <path> "<description of at least five words>"
+# <module> may be a source module, tests, or docs. Header selection is by DESTINATION, not by the
+# module token (v3.6.1): any .md target resolving under the configured docRoot gets the DOC
+# DISCIPLINE header and triggers a doc-index regeneration, whatever module was named, and the
+# promotion is printed rather than applied silently. Everything else gets the module stamp in the
+# project's comment syntax (read from .phaneslight/config.json). Refuses a missing or too-short
+# description.
 $ErrorActionPreference = 'Stop'
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   $d = (Get-Location).Path
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
@@ -17,7 +20,7 @@ function Find-PhanesRoot {
 }
 
 if ($args.Count -lt 3) {
-  [Console]::Error.WriteLine('new-file: usage: phanes new-file <module> <path> "<description of at least five words>"')
+  [Console]::Error.WriteLine('new-file: usage: phaneslight new-file <module> <path> "<description of at least five words>"')
   exit 1
 }
 $module = $args[0]
@@ -30,11 +33,11 @@ if ($wordCount -lt 5) {
   exit 1
 }
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('new-file: .phanes/config.json not found from this directory'); exit 1 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('new-file: .phaneslight/config.json not found from this directory'); exit 1 }
 
 try {
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
 } catch {
   # No honest default exists for any of the three values this config supplies: no default
   # commentSyntax (a wrong one is a syntax error in the target language, e.g. "//" in a .py file),
@@ -42,7 +45,7 @@ try {
   # (an unreadable config would silently switch off the module guard this release ships as a
   # breaking change). new-file is the project's only sanctioned creation path and it writes to
   # disk, so refusing on an unparseable config is strictly safer than guessing at any of the three.
-  [Console]::Error.WriteLine('new-file: .phanes/config.json is malformed and could not be parsed. Refused.')
+  [Console]::Error.WriteLine('new-file: .phaneslight/config.json is malformed and could not be parsed. Refused.')
   exit 1
 }
 $comment = '//'
@@ -75,10 +78,12 @@ if ($configuredModules.Count -gt 0) {
 $full = $relPath
 if (-not [System.IO.Path]::IsPathRooted($relPath)) { $full = Join-Path $root $relPath }
 
-# Cached once; reused below both for the containment guard and for header selection.
+# Whether the CALLER named the docs pseudo-module. Header selection no longer keys off this alone
+# (see the destination test below); it survives only as the trigger for the docRoot containment
+# refusal, which is about what the caller asked for rather than about what the header should be.
 # Case-sensitive (-ceq): matches the POSIX sibling's literal `[ "$module" = "docs" ]`, and
 # the legal-module check above, which is now case-sensitive too (-cnotcontains).
-$isDocs = ($module -ceq 'docs')
+$isDocsModule = ($module -ceq 'docs')
 
 # Containment check, every target: must live under the repository root. Without this a source
 # or tests target could escape the project entirely (`new-file core ../outside.c` wrote a real
@@ -110,13 +115,35 @@ if (-not $fullResolved.StartsWith($rootResolved.TrimEnd($dirSep) + $dirSep, [Sys
 # nothing on disk reflects.
 $displayPath = $fullResolved.Substring($rootResolved.TrimEnd($dirSep).Length).TrimStart($dirSep) -replace '\\', '/'
 
-if ($isDocs) {
-  $docBase = [System.IO.Path]::GetFullPath((Join-Path $root $docRoot))
-  if (-not $fullResolved.StartsWith($docBase.TrimEnd($dirSep) + $dirSep, [System.StringComparison]::OrdinalIgnoreCase)) {
-    $suggest = (Join-Path $docRoot $relPath) -replace '\\', '/'
-    [Console]::Error.WriteLine("new-file: docs target must live under '$docRoot/'. Got '$relPath'. Did you mean '$suggest'? Refused.")
-    exit 1
-  }
+# Header selection is by DESTINATION, not by the module token (v3.6.1). The old test was
+# `$module -ceq 'docs'`, but no project's configured module list contains 'docs' -- `module-list`
+# prints the real modules -- so the natural call (`new-file <a real module> documentation/x.md`)
+# silently stamped a SOURCE comment onto a Markdown document, cost it the DOC DISCIPLINE block,
+# and put a `<module> | <desc>` line in _index.md where a description belongs. There is no signal
+# in the module token to fix that with; there is one in the path. A .md file under docRoot IS
+# documentation regardless of which module its author was thinking in.
+$docBase = [System.IO.Path]::GetFullPath((Join-Path $root $docRoot))
+$underDocRoot = $fullResolved.StartsWith($docBase.TrimEnd($dirSep) + $dirSep, [System.StringComparison]::OrdinalIgnoreCase)
+# .md only: the DOC header is an HTML comment, which is a syntax error in any other language.
+# A .c file under docRoot keeps its module stamp; an explicit `docs` module keeps the DOC header
+# whatever the extension, because an explicit request is not a guess to be second-guessed.
+$isMarkdown = ([System.IO.Path]::GetExtension($fullResolved) -ieq '.md')
+$isDocs = $isDocsModule -or ($underDocRoot -and $isMarkdown)
+
+# The docRoot containment refusal is about what the CALLER asked for: naming `docs` and pointing
+# outside docRoot is a mistake worth refusing. A source module pointed outside docRoot is not.
+if ($isDocsModule -and -not $underDocRoot) {
+  $suggest = (Join-Path $docRoot $relPath) -replace '\\', '/'
+  [Console]::Error.WriteLine("new-file: docs target must live under '$docRoot/'. Got '$relPath'. Did you mean '$suggest'? Refused.")
+  exit 1
+}
+
+# Promotion is never silent: the caller named a module, and the module token is about to be
+# ignored for header selection. Held until after the write so a later refusal cannot emit a
+# note about a file that was never created.
+$promotionNote = $null
+if ($isDocs -and -not $isDocsModule) {
+  $promotionNote = "new-file: target is under '$docRoot/'; wrote the DOC header (module '$module' ignored for header selection)."
 }
 
 if (Test-Path -LiteralPath $full) {
@@ -137,22 +164,23 @@ if ($isDocs) {
   $header = @"
 <!-- DOC | $description -->
 <!-- DOC DISCIPLINE | Soft ceiling: 500 lines. One topic per file; structure under ## headings.
-     The DOC line above feeds ${bt}phanes doc-index${bt} $dash keep it accurate; it is this file's line in _index.md.
+     The DOC line above feeds ${bt}phaneslight doc-index${bt} $dash keep it accurate; it is this file's line in _index.md.
      If this file exceeds the ceiling: split it into a same-named folder of focused topic files;
      carry both header lines into every part; update every inbound reference in the same change set;
-     finish by running ${bt}phanes doc-index${bt}.
+     finish by running ${bt}phaneslight doc-index${bt}.
      Consumers: NEVER bulk-read documentation folders $dash read _index.md first, load only what you need.
-     Audit: ${bt}phanes doc-check${bt}. -->
+     Audit: ${bt}phaneslight doc-check${bt}. -->
 
 "@
   Write-Utf8 $full $header
+  if ($promotionNote) { Write-Output $promotionNote }
   Write-Output "new-file: created $displayPath (docs)"
   # docs targets finish by regenerating the indexes.
   $docIndex = Join-Path $PSScriptRoot 'doc-index.ps1'
   if (Test-Path -LiteralPath $docIndex) { & $docIndex | Out-Null }
 } else {
   $l1 = "$comment $module | $description"
-  $l2 = "$comment Soft size threshold: 500 LOC. Run ${bt}phanes loc-check${bt} if uncertain."
+  $l2 = "$comment Soft size threshold: 500 LOC. Run ${bt}phaneslight loc-check${bt} if uncertain."
   Write-Utf8 $full "$l1`n$l2`n`n"
   Write-Output "new-file: created $displayPath ($module)"
 }

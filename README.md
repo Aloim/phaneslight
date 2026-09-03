@@ -1,196 +1,218 @@
-# Phanes
+# PhanesLight
 
-**Phanes** is a bootstrap prompt for [Claude Code](https://claude.com/claude-code). In a single command it turns an empty or chaotic repository into a fully wired, opinionated, multi-agent development environment.
+> ## ⚠️ v3.6.1 — Renaming, Repository Migration, and a Workflow Update
+>
+> **This is a major release. It renames the project, moves the repository, and changes how runs handle their own durability. Existing installs must upgrade.**
+>
+> **The project is now PhanesLight.** `phanes.md` → `phaneslight.md`, `/phanes` → `/phaneslight`, `/phanesupgrade` → `/phaneslightupgrade`, and project state moved from `.phanes/` to `.phaneslight/`.
+>
+> **The repository has moved to [`github.com/Aloim/phaneslight`](https://github.com/Aloim/phaneslight).** This is the new home. Update your bookmarks and any scripted fetch.
+>
+> **Why both:** a **more sophisticated Phanes project** is coming, and it will inherit the `Aloim/phanes` repository and the Phanes name. PhanesLight is not becoming that tool. It is a bootstrap prompt, it is staying one, and it is getting out of the way of the larger project rather than being absorbed into it. The two will ship side by side.
+>
+> **v3.6.1 is published to BOTH repositories,** deliberately and once. Installations that still check the old URL will see this release, offer you the upgrade, and repoint themselves at the new repository as part of it. **Every later version ships to `Aloim/phaneslight` only.** If you skip this upgrade, your install stops seeing releases and will eventually be checking a repository that holds a different product.
+>
+> **Also shipping as a plugin in the Anthropic Marketplace** *(link to follow)*.
+>
+> **Prefer the old workflow? It is kept whole.** v3.6.0 replaced the review chain with an escalation ladder, which is a real change in how work gets verified, so [`older version/v3.4.1/`](older%20version/v3.4.1/) now holds the **complete** last pre-ladder distribution — prompt, upgrade prompt, README, changelog and full template library — rather than a bare prompt file. Every earlier version has been removed from that folder. Read both and pick; the choice is yours, not ours.
+>
+> **What to do:** run `/phaneslightupgrade`. It performs the version upgrade, the name migration and the repository migration in one pass, on a branch you review and merge yourself. See [Upgrading an older install](#upgrading-an-older-install). **Restart your session afterwards**; hooks are snapshotted at session start.
+>
+> Beyond the migration, v3.6.1 fixes thirteen defects found in production use. The headline ones: sub-agent returns are now persisted to disk before the next dispatch, so a context ceiling or an API crash is a bookmark rather than a data-loss event; a pinned model that runs out of quota degrades down a documented ladder instead of halting the tier; and owner-authorized deviations from a generated directive survive regeneration in a new `pinned:project` block. Full accounting in [`Changelog.md`](Changelog.md).
 
-It is not something you install once and forget. Think of it as a living specification that you re-run. Each time you invoke `/phanes`, it surveys the project again, upgrades the existing sub-agents, fills in any missing infrastructure, and bumps a hidden run counter. The result is an agentic team that grows with your codebase instead of rotting beside it.
+---
 
-**The prompt is one file.** You install a single Markdown file, `phanes.md`, as your `/phanes` command. The scripts, hooks, agents, and documents it sets up are created inside your repository during the run. The scripts that do not depend on your project's language, and the agent and report prompt templates, are fetched as tested templates from this repository, pinned to the prompt's own version, and everything else is generated. If the fetch cannot happen, the run generates those as well, so an offline install is still complete.
+**PhanesLight** is a bootstrap prompt for [Claude Code](https://claude.com/claude-code). One command turns an empty or chaotic repository into a fully wired, opinionated, multi-agent development environment.
 
-**Run `/phanes` and `/phanesupgrade` on Opus 5 at `high` effort** (`claude --model opus --effort high`), or Fable 5 if you can afford it. Those runs build and maintain the whole setup, so they are the ones worth spending on. Afterwards, the everyday work of the team they install is designed to run on Sonnet 5, which is what keeps a Max 5x plan viable. Effort is `high` in every case. See [Which model for which run](#which-model-for-which-run) for the table.
+It is not install-once-and-forget. It is a living specification you re-run: each `/phaneslight` surveys the project again, upgrades the sub-agents, fills in missing infrastructure, and bumps a run counter. The result is an agentic team that grows with your codebase instead of rotting beside it.
 
-**Modular by design.** The core stays that one file on purpose. Anything beyond bootstrapping ships as a separate [companion tool](#companion-tools). Each companion works on its own in any repository, with no Phanes install at all, and each one snaps into the structures Phanes builds the moment it lands in a Phanes-managed project.
+**The prompt is one file.** You install a single Markdown file as your `/phaneslight` command. The scripts, hooks, agents and documents it sets up are created inside your repository during the run: language-independent scripts and prompt templates are fetched as tested templates pinned to the prompt's own version, everything else is generated. If the fetch fails, the run generates those too, so an offline install is still complete.
 
-**Which file do you need?**
+**Run `/phaneslight` and `/phaneslightupgrade` on Opus 5 at `high` effort** (`claude --model opus --effort high`). Those runs build and maintain the whole setup, so they are the ones worth spending on. The team they install is designed to run on Sonnet 5 afterwards, which is what keeps a Max 5x plan viable. See [Which model for which run](#which-model-for-which-run).
+
+**Modular by design.** The core stays one file on purpose; anything beyond bootstrapping ships as a separate [companion tool](#companion-tools) that works standalone in any repository and snaps into PhanesLight's structures when it finds them.
 
 | Your situation | What to use |
 | --- | --- |
-| A fresh project, or any project that has no Phanes yet | Use `phanes.md` and run `/phanes` for the full setup. Running it again also keeps a current install up to date. |
-| A project that already carries an older Phanes (any version) | Use `PhanesUpgrade.md` and run `/phanesupgrade` (see [Upgrading an older install](#upgrading-an-older-install) below). It refreshes your `/phanes` command, then upgrades the whole Phanes structure on a dedicated branch behind an evidence-verified checklist. Your accumulated knowledge is preserved, never rewritten. |
+| Fresh project, or one with no PhanesLight yet | `phaneslight.md` → `/phaneslight`. Re-running it also keeps a current install up to date. |
+| A project carrying an older PhanesLight or Phanes (any version) | `PhanesLightUpgrade.md` → `/phaneslightupgrade`. Refreshes your command, then upgrades the whole structure on a dedicated branch behind an evidence-verified checklist. Accumulated knowledge is preserved, never rewritten. |
 
-**Contents**
-
-- [What it does](#what-it-does)
-- [Which model for which run](#which-model-for-which-run)
-- [How to use](#how-to-use)
-- [Core principles enforced by Phanes](#core-principles-enforced-by-phanes)
-- [For inexperienced users: step-by-step from zero](#for-inexperienced-users-step-by-step-from-zero)
-- [How to install](#how-to-install)
-- [Upgrading an older install](#upgrading-an-older-install)
-- [Companion tools](#companion-tools)
-- [Recommended third-party enhancements](#recommended-third-party-enhancements)
-- [Version](#version) · [License](#license) · [Contributing](#contributing)
+**Contents** · [What it does](#what-it-does) · [Which model for which run](#which-model-for-which-run) · [How to use](#how-to-use) · [Core principles](#core-principles-enforced-by-phaneslight) · [From zero](#for-inexperienced-users-step-by-step-from-zero) · [How to install](#how-to-install) · [Upgrading](#upgrading-an-older-install) · [Companion tools](#companion-tools) · [Third-party enhancements](#recommended-third-party-enhancements) · [Version](#version) · [License](#license) · [Contributing](#contributing)
 
 ---
 
 ## What it does
 
-The first time you run `/phanes` in a repository, the prompt walks Claude Code through a strict setup in several phases.
+**1. Pre-flight.** The run checks itself first: it fetches the published `phaneslight.md` and compares version stamps, offering the upgrade if a newer one has shipped. It then installs the four MCP servers it benefits from, and only four, because every tool schema costs context in every session and each server has to remove more context than its schema costs:
 
-**1. Pre-flight.** Before anything else, the run checks itself. It fetches this repository's `phanes.md` and compares version stamps. If a newer version has shipped, it asks whether you want to upgrade: accept and it stops and routes you to `/phanesupgrade`, decline and it proceeds on the installed version.
+- **`context7`** for live library documentation, on demand.
+- **`deepwiki`** for digest answers about GitHub dependencies, so agents never pull dependency source into context.
+- **`semble`** for hybrid code search, so an agent finds the exact snippet instead of grepping a module and reading whole files.
+- **`serena`** for symbol-level navigation. **(v3.6.1)** Granted only where its language servers actually cover your stack; on a PowerShell, shell or Markdown project it degrades to file search that `semble` already does better, so it is skipped and the reason recorded.
 
-It then installs the four MCP servers it benefits from:
+These are enhancements, not dependencies: a failed install becomes a TODO and the run continues degraded. The pre-flight then detects your platform, runs a capability census probing each server for real reachability, and asks you once which capabilities it may build policy around. Nothing you installed is ever changed or removed. A ledger at `.phaneslight/run-progress` lets a session that dies or compacts mid-bootstrap resume from the last completed phase.
 
-- `context7` for live library documentation, fetched on demand.
-- `deepwiki` for digest answers about external GitHub dependencies, so agents never pull dependency source into their context.
-- `semble` for hybrid code search, so an agent finds the exact snippet it needs instead of sweeping a whole module with grep and reading entire files.
-- `serena` for symbol-level code navigation, installed on the first run. It runs through `uv`, which the pre-flight also installs if it is missing.
+**2. Repository comprehension.** It reads the README, source tree, configs and CI to work out the project's purpose, primary language, build system and module boundaries, filtering out vendored dependencies, example packs and demo content.
 
-These servers are enhancements, not hard dependencies. If one fails to install, the run records a TODO and continues in a degraded mode. There are exactly four on purpose: every MCP tool schema costs context in every session, so each server has to earn its place by removing more context than its schema costs. Every generated agent carries a usage rubric saying when each server saves tokens and when to make no MCP call at all.
+**3. Project memory infrastructure.** The substrate every sub-agent works against:
 
-The pre-flight detects your platform (bash on POSIX, PowerShell on Windows), then runs a capability census of what you already have installed, probing each MCP server for actual reachability and authentication rather than mere configuration. On a first run it asks you once, as a single checklist, which of those capabilities Phanes may build policy around; the choice is saved, and later runs ask only about changes. Phanes only ever builds a mandate around a capability you selected and the census found reachable, and nothing you installed is ever changed or removed. It also ensures the official `frontend-design` skill is present (skills cost no context until invoked). Finally, each run keeps a progress ledger at `.phanes/run-progress`, so a session that dies or compacts mid-bootstrap resumes from the last completed phase.
+- **`documentation/`** — session summaries, plans, dated architecture snapshots, and a curated API registry capturing what code search cannot see (deprecations, contracts beyond type signatures, anti-patterns). Every folder carries a **generated `_index.md`**, so agents find knowledge by descending indexes at a few hundred tokens a hop instead of scanning the tree. **(v3.6.1)** Indexes are ordered by filename rather than modification time, so a sequenced folder's newest entry is its first line and editing an old document no longer reorders the whole index. Files respect a 500-line soft ceiling.
+- **`tests/`** — `unit/`, `integration/`, `e2e/`, `fixtures/`, `helpers/`, with the same header-stamp discipline `src/` uses.
+- **`.phaneslight/scripts/`** — the library that owns every mechanical rule: stamped file creation, line counts, documentation audit, index regeneration, hot-file character budgets, API baseline regeneration and diffing. Each script finds the project by walking up to `.phaneslight/config.json` and uses only root-relative paths, so a hook can never be wired to the wrong tree. **On Windows, ten more commands** mechanize what a run previously did by hand — `preflight`, `update-preflight`, `install-templates`, `scaffold`, `manifest-write`, `ledger`, `census-diff`, `hook-ledger-status`, `repo-manifest`, `batch-apply` — turning thirty to fifty tool calls into one digest and letting a re-run measure what moved before rebuilding. **Every one observes or writes what it is told to and decides nothing.** On POSIX they are refused by name rather than faked, and the manual flow is unchanged.
+- **`.phaneslight/returns/`** — **(v3.6.1)** durable sub-agent returns, written before the next dispatch. See [Core principles](#core-principles-enforced-by-phaneslight).
+- **`.claude/settings.json`** — hooks that enforce rules at the harness layer: a blocking guard denying any unstamped new file, an advisory check running size and documentation audits on every write. Prompts forget under context pressure. Hooks cannot.
 
-**2. Repository comprehension.** Phanes reads the README, the source tree, the configs, and the CI to work out the project's real purpose, its primary language, its build system, and its module boundaries. Directories that are not part of the core product, such as vendored dependencies, example packs, and demo content, are filtered out.
+**4. Tiered workflows.** Every task is sorted into **T1** (single-file fix), **T2** (feature inside one module) or **T3** (cross-module). Each tier loads different context and engages a different chain, but **disclosure is universal**: even a T1 fix is named in a report, and closure reconciles what landed against what was intended at every close. Only the paper trail scales with tier. A task that outgrows its tier mid-flight stops and asks for promotion.
 
-**3. Project memory infrastructure.** Phanes scaffolds the substrate that every sub-agent works against:
+**5. The roster: five agents, always the same five,** named by model tier. Domain expertise is composed per task and injected into the spawn prompt rather than baked into an agent file, so the always-on context cost is fixed rather than growing with the project.
 
-- `documentation/` holds session summaries, plans, dated architecture snapshots, and a curated API registry. That registry captures the things code search cannot see, such as deprecations, contracts beyond the type signatures, and anti-patterns. The generated API surface itself lives outside the tree as a machine baseline in `.phanes/registry/`. Every folder carries a **generated `_index.md`**, so agents find knowledge by descending indexes, which costs a few hundred tokens, instead of scanning the whole tree. Files respect a soft ceiling of 500 lines and are split into an indexed folder when they outgrow it.
-- `tests/` holds `unit/`, `integration/`, `e2e/`, `fixtures/`, and `helpers/`, with a verbatim README and the same `phanes new-file` header-stamp discipline that `src/` uses.
-- `.phanes/scripts/` is a script library that owns every mechanical rule, from creating files with header stamps and checking line counts to auditing the documentation ceiling (`doc-check`), regenerating indexes (`doc-index`), measuring the root files that load every session against their character budget (`register-check`), regenerating the API baseline, diffing the API, and listing modules. The scripts that do not depend on your language are installed from tested templates fetched from this repository (pinned to the running version), and each one finds the project by walking up to `.phanes/config.json` and uses only paths relative to that root, so a hook can never be wired to the wrong tree.
-- **v3.4 adds ten more commands, on Windows**, which mechanize the parts of the run that were previously done by hand. `preflight` gathers a whole pre-flight (install marker, versions, MCP servers, platform, installed capabilities) into one digest instead of thirty to fifty separate tool calls; `update-preflight` measures what has changed since the last run so a re-run can verify instead of regenerate; `install-templates`, `scaffold` and `manifest-write` do the fetching, tree-building and provenance recording; `ledger` and `census-diff` handle run state and capability drift; `hook-ledger-status` is the session-start read of that ledger, silent unless a previous run died mid-flight; and `repo-manifest` and `batch-apply` give agents a source inventory and a way to apply many edits in one call rather than one call per edit. **Every one of them observes or writes what it is told to and decides nothing**: `preflight` reports that an install looks like a legacy one, the session still decides what to do about it. On POSIX these ten are refused by name rather than faked, and the manual flow they replace is unchanged, so nothing is lost there.
-- `.claude/settings.json` holds the hooks that enforce mechanical rules at the harness layer. A blocking PreToolUse guard denies creation of any unstamped new file, and an advisory PostToolUse check runs size and documentation audits on every write. Prompts forget under context pressure. Hooks cannot.
-- `.phanes/config.json` records the confirmed module list, language, build system, and hook preferences.
+| Agent | Model | What it is for |
+| --- | --- | --- |
+| `<slug>-orchestrator` | Opus 5 | Authors, applies and dispatches. Main executor as well as orchestrator. |
+| `<slug>-reviewer` | Fable 5.1 | HIGH and CRIT findings only. Writes a fix plan and hands it back; never applies. |
+| `<slug>-worker` | Sonnet 5 | The default working tier for authored code, within a dispatched scope, disclosing every edit. |
+| `<slug>-mechanic` | Haiku 4.5 | Mechanical transforms, indexing, archive condensation, fetch-and-digest retrieval. Never authored logic. |
+| `<slug>-closure` | Sonnet 5 | Independent re-derivation at every close. Writes no code; its output is a flag, never a fix. |
 
-**4. Tiered workflow definition.** Every task is sorted into one of three tiers: T1 for a single-file quick fix, T2 for a feature inside one module, and T3 for anything that cuts across modules. Each tier loads a different amount of context and engages a different chain of agents, but review is universal. Even a T1 fix gets a lightweight Critic pass on its diff. Only the depth of the review and the weight of the documentation scale with the tier. If a task outgrows its tier mid-flight, the agent must stop and ask the orchestrator to promote it.
+The expensive tier is affordable because it is rare: worker and mechanic escalate to whoever spawned them, the orchestrator handles MED itself, and only an undeferred HIGH or CRIT reaches Fable. **(v3.6.1)** A pinned model that is unreachable is retried with backoff, then substituted down a documented ladder with the substitution recorded, rather than halting its tier.
 
-**5. Sub-agent roster generation.** Phanes writes 6 to 10 deeply scoped, expert personas to `.claude/agents/*.md`. Each one is assigned a model by a dated rubric that is re-validated on every update run:
+**6. Workflow codification.** YAML files in `.claude/workflows/` codify task *sequences*: what happens in what order, which scripts run when. Who spawns whom is fixed in the prompt, not per project. **(v3.6.1)** At least one workflow must cover **recurring maintenance** (backlog triage, conformance audit, snapshot refresh) rather than change-type work alone, with an explicit trigger and the understanding that finding nothing is a successful run.
 
-- **Architect/Designer**, the sole writer of the curated registry and the architecture snapshots.
-- **close-verifier**, the independent close-time verifier and sole writer of the generated API baseline in `.phanes/registry/`. After every structural change it re-derives the baseline, re-runs the build check itself rather than trusting the coder's report, and confirms that what was applied matches what was approved. It stays a separate agent from the Architect on purpose, since a verifier that also authored the work is not an independent check.
-- **Critic agents**, which produce numbered, ID-tagged audit reports.
-- **Patch-Author**, which turns the approved plan into sequenced patch files but never applies them.
-- **Executor**, which applies approved diffs only and uses `phanes new-file` for every new file.
-- **Synthesizer/Arbiter**, which consolidates parallel perspectives into one unified plan.
-- Plus Analyzer, Planner, Validator, Optimizer, Integrator, Monitor, and Cleaner variants tuned to your specific stack.
-- **Scouts** are not part of the roster. Specialists spawn them on the fly as read-only subagents that fetch and digest bulky one-time context such as module surveys, test logs, and registry sweeps. A strict cost guard makes sure every spawn pays for itself in the specialist context it preserves.
+**7. Bootstrap session summary.** `documentation/session-summaries/SS00001_phaneslight-bootstrap_<date>.md` records the install, module list, roster and deferred TODOs.
 
-**6. Workflow codification.** The YAML files in `.claude/workflows/` are the single source of truth for how agents chain together. Every chain ends the same way: the Synthesizer runs for parallel work only, then the Critic, then `close-verifier` on T2 and T3 changes, then the primary agent. Because of that ordering, the artifact that gets applied is always the one that was audited. Phanes also updates `CLAUDE.md`, at the project root and at module roots only, so the primary agent knows how to triage, delegate, navigate the documentation by index, and review.
+> **After the first run, restart your Claude Code session.** Hook configuration is snapshotted at session start, so the enforcement hooks arm on the next one.
 
-Visualized, that chain looks like this. Where the work enters depends on its shape: a single task is triaged and run directly, while a multi-step plan is handed to an ephemeral **Orchestrator** that walks the plan in small batches. A task's tier changes only how deep the review goes and how much documentation it produces, never whether the review happens:
+### How the five work together
+
+Where work enters depends on its size: a single task or a short plan is triaged and run directly; a plan of five steps or more engages `<slug>-orchestrator`, which walks the plan and holds the run's context so your own session does not.
+
+Only two agents can spawn: the orchestrator and the reviewer. That is what
+bounds the whole system to three levels, and it is why the picture below is
+this shape rather than an open mesh.
+
+**Work travels down with a brief. Findings travel up by severity.**
 
 ```text
-                          what you asked for
-                                  │
-              ╭───────────────────┴────────────────────╮
-              │                                        │
-        a single task                          a multi-step plan
-        (or a short plan,                      (5 or more steps)
-         4 steps or fewer)                             │
-              │                                        ▼
-              │                             ╭──────────────────────╮
-              │                             │  Orchestrator        │
-              │                             │  ephemeral, one per  │
-              │                             │  batch of 1 to 3     │
-              │                             │  consecutive steps,  │
-              │                             │  never across a      │
-              │                             │  phase boundary;     │
-              │                             │  workers persist for │
-              │                             │  the batch, resumed  │
-              │                             │  not respawned       │
-              │                             ╰──────────┬───────────╯
-              │                                        │  per step in the batch,
-              │                                        │  or once for the whole
-              │                                        │  batch where the steps
-              │                                        │  are small and share
-              │                                        │  no files  ****
-              │                                        │
-              │                                        │  the first step's planner
-              │                                        │  reports back how big the
-              │                                        │  work really turned out to
-              │                                        │  be, and the batch is
-              │                                        │  resized to match  ***
-              │                                        │
-              ╰───────────────────┬────────────────────╯
-                                  │
-                                  ▼   triaged into a tier
-            ╭─────────────────────────────────────────╮
-            │ T1  one file      lightweight review    │
-            │ T2  one module    full review           │
-            │ T3  cross-module  full review + snapshot│
-            ╰─────────────────────┬───────────────────╯
-                                  │
-                                  ▼   specialists: bounded fan-out, ≤ 5 parallel
-                  Analyzer · Planner · Patch-Author · …   (tuned to your stack)
-                                  │   each emits a report + proposed diff, never applies
-                                  ▼
-                            Synthesizer    consolidate parallel perspectives  *
-                                  │
-                                  ▼
-                            Critic         two verdicts: spec compliance + quality
-                                           (may fix trivia itself, bounded, audited)
-                                  │
-                                  ▼
-                            close-verifier regenerate API baseline  (T2 / T3 only)
-                                  │
-                                  ▼
-                            Executor       apply the audited diff, and only that
-                                  │
-                                  ▼
-                     back to the Orchestrator, which writes one session
-                     summary per batch and returns a short JSON receipt **
+                                  YOU
+                                   │
+                     a task, or a plan of steps
+                                   ▼
+   ╭─────────────────────────────────────────────────────────────────╮
+   │ <slug>-orchestrator                                       opus  │
+   │ the only agent that both decides and applies                    │
+   │ writes anywhere · spawns all four · holds the run's context     │
+   ╰──┬──────────────┬───────────────┬───────────────────┬───────────╯
+      │ a composed   │ a composed    │ a HIGH or CRIT    │ "this step is
+      │ brief: scope,│ brief: fetch  │ it chose not      │  applied.
+      │ conventions, │ this, digest  │ to defer          │  verify it"
+      │ acceptance   │ it            │                   │
+      ▼              ▼               ▼                   ▼
+ ╭──────────╮  ╭───────────╮  ╭─────────────╮  ╭────────────────────╮
+ │ -worker  │  │ -mechanic │  │  -reviewer  │  │      -closure      │
+ │  sonnet  │  │   haiku   │  │    fable    │  │       sonnet       │
+ ├──────────┤  ├───────────┤  ├─────────────┤  ├────────────────────┤
+ │ authored │  │ mechanical│  │ plans the   │  │ re-derives from    │
+ │ code,    │  │ transforms│  │ fix and     │  │ source: registry,  │
+ │ inside   │  │ and bulky │  │ hands it    │  │ api-diff, and it   │
+ │ its own  │  │ retrieval │  │ back        │  │ re-runs the build  │
+ │ scope    │  │           │  │             │  │ and tests itself   │
+ ├──────────┤  ├───────────┤  ├─────────────┤  ├────────────────────┤
+ │ writes   │  │ writes    │  │ writes      │  │ writes no code,    │
+ │ in scope │  │ in scope  │  │ NOTHING     │  │ ever               │
+ ╰────┬─────╯  ╰─────┬─────╯  ╰──────┬───┬──╯  ╰─────────┬──────────╯
+      │              │               │   │               │
+      │              │               │   ╰── may spawn -worker and -mechanic
+      │              │               │       for its own cheap sub-tasks
+      │              │               │                   │
+      ╰──────────────┴───────────────┴───────────────────╯
+                               │
+                               ▼
+            every return goes to ITS OWN spawner, never past it,
+            and is written to .phaneslight/returns/ BEFORE the
+            next dispatch goes out
 
-        * Synthesizer runs for parallel work only. Because the chain always
-          ends review-then-apply, the artifact applied is always the one audited.
-       ** Orchestrated runs only. The receipt is all that crosses back into your
-          main session, which is why a long plan can run for hours without the
-          session filling up and compacting. Single tasks and short plans skip
-          the Orchestrator entirely and return straight to you.
-      *** The opening batch size is a guess made before any design exists. Once
-          the first step is actually designed, the planner knows better and says
-          so, and the batch grows or shrinks within the 1 to 3 band.
-     **** Grouped batches, which is what a batch is for. The steps in a batch run
-          as ONE chain, not one chain each, so three steps cost one review pass
-          instead of three and the context is loaded once instead of three times.
-          Steps that touch the same files are the best candidates, not the worst.
-          A batch splits back into per-step chains for one reason only: a step
-          needs an earlier step's result already written to disk before it can
-          even be written. Nothing is skipped: the Critic still returns its two
-          verdicts per step, the Executor still applies in plan order and names
-          the exact failing step, and anything ambiguous stays grouped.
+   what comes back
+     -worker    the code, and EVERY edit it made, named in its report
+     -mechanic  a digest with file:line refs and no judgment of its own
+     -reviewer  a fix PLAN. Never a diff, never an edit.
+     -closure   FLAGS graded on the ladder: API drift, the build and
+                tests it re-ran itself, doc breaches. Never a fix.
 ```
 
-**This is the shape Phanes is built for.** The setup pays off most when you write a plan first, broken into numbered steps and grouped into phases, and then let the run work through it. Give each step a clear boundary and each phase a clear exit condition, hand the plan to Phanes, and the Orchestrator will size its own batches, route every step to the right tier, and keep the review chain intact from the first step to the last. A vague single sentence still works, it simply gives the machinery much less to hold onto.
+A worker spawned by the reviewer reports to the **reviewer**, not to the
+orchestrator. Nobody reaches past the agent that dispatched them, and nobody is
+ever forked: every spawn carries a self-contained brief rather than inheriting a
+parent's context.
 
-**7. Bootstrap session summary.** Phanes writes `documentation/session-summaries/SS00001_phanes-bootstrap_<date>.md`, which records the install, the confirmed module list, the agent roster, and any TODOs that were deferred.
+### What happens to a finding
 
-> **After the first run, restart your Claude Code session.** Hook configuration is snapshotted when a session starts, so the enforcement hooks arm on the next session. Phanes reminds you of this verbatim at the end of the run.
+Any agent can raise one. There is one ladder, and only the top three rungs
+create work anywhere:
 
-When you run `/phanes` again, it detects the existing install through the `.claude/.phanes` marker and refreshes in place. Agents, workflows, scripts, hooks, and READMEs are all measured against the latest `phanes.md` and refreshed wherever they have drifted. If a newer Phanes has been published, the run stops first and asks whether you want to upgrade; accept and it routes you to `/phanesupgrade` (see [Upgrading an older install](#upgrading-an-older-install)), decline and the run proceeds on the installed version.
+```text
+   CRIT  ·  HIGH  ·  MED   ──►  create work
+   LOW   ·  INFO           ──►  create none, ever. They stay in the report,
+                                are never rehomed, never become follow-ups.
+
+   -worker / -mechanic finds something MED or above
+        │
+        │   stops immediately. Does NOT attempt the fix.
+        ▼
+   its own spawner
+        │
+        ▼
+   -orchestrator, now holding a HIGH or CRIT
+        │
+        ▼   the decision matrix: can this wait until after the run?
+   ╭──────────────────────────╮   ╭──────────────────────────────────╮
+   │ DEFER                    │   │ ESCALATE                         │
+   │ recorded with its grade, │   │ spawn -reviewer, which plans the │
+   │ its file:line and a      │   │ fix and hands the plan back      │
+   │ one-line justification.  │   │                │                 │
+   │ Travels in the handover  │   │                ▼                 │
+   │ until resolved or        │   │ -orchestrator applies it. The    │
+   │ explicitly closed. A     │   │ reviewer never touches the repo. │
+   │ deferred CRIT is named   │   ╰──────────────────────────────────╯
+   │ in the handover's first  │
+   │ line.                    │        MED never reaches the reviewer.
+   ╰──────────────────────────╯        The orchestrator handles it itself,
+                                       which is what keeps the most
+                                       expensive tier rare.
+
+   ── and independently of all of the above ──────────────────────────
+
+   -closure runs at every phase close, every T2/T3 step close, and before
+   every handover. It re-derives rather than trusting, so it catches what
+   nobody reported: an edit no one disclosed comes back as drift.
+```
+
+**This is the shape PhanesLight is built for.** It pays off most when you write a plan first, as numbered steps grouped into phases, each step with a clear boundary and each phase with an exit condition — that is what gives the orchestrator something to route. A vague sentence still works; it just gives the machinery less to hold onto.
+
+Re-running `/phaneslight` detects the existing install through the `.claude/.phaneslight` marker and refreshes in place, measuring agents, workflows, scripts, hooks and READMEs against the latest spec and refreshing whatever drifted.
 
 ---
 
 ## Which model for which run
 
-Two different questions get confused with each other. **Which model you launch the session on** changes per run. **Which model each generated agent runs on** is decided by Phanes itself and is not your dial. This section is about the first one.
+Two questions get confused. **Which model you launch the session on** changes per run. **Which model each generated agent runs on** is decided by PhanesLight and is not your dial. This is about the first.
 
 | The run | Recommended model | Effort |
 | --- | --- | --- |
-| **Install, the first `/phanes` in a project** | **Opus 5**, or **Fable 5** if you can afford it | `high` |
-| **Update, re-running `/phanes`** | **Opus 5**, or **Fable 5** if you can afford it | `high` |
-| **Upgrade or patching, `/phanesupgrade`** | **Opus 5**, or **Fable 5** if you can afford it | `high` |
-| **Everyday workflow execution, once the team is installed** | **Sonnet 5**, which is what makes Max 5x workable, or **Opus 5** if you can afford it. **Fable 5 for pre-planning only** | `high` |
+| **Install** — first `/phaneslight` in a project | **Opus 5**, or **Fable 5** if you can afford it | `high` |
+| **Update** — re-running `/phaneslight` | **Opus 5**, or **Fable 5** if you can afford it | `high` |
+| **Upgrade** — `/phaneslightupgrade` | **Opus 5**, or **Fable 5** if you can afford it | `high` |
+| **Everyday work** with the installed team | **Sonnet 5** (what makes Max 5x workable), or Opus 5 if budget allows. **Fable 5 for pre-planning only** | `high` |
 
 ```bash
 claude --model opus   --effort high     # installing, updating, or upgrading
 claude --model sonnet --effort high     # everyday work with the installed team
 ```
 
-**Why the bootstrap runs hot.** `/phanes` and `/phanesupgrade` are single-shot, judgment-dense runs. They survey a whole repository, decide module boundaries, author an entire agent roster, and in the upgrade case perform file surgery on accumulated project knowledge that cannot be re-earned if it is lost. You pay for that run once and live inside its output for weeks, so a weaker model costs far more downstream than it saves at the time. Opus 5 is the recommendation. Fable 5 is better still and priced accordingly.
+**The bootstrap runs hot because it is paid once.** `/phaneslight` and `/phaneslightupgrade` are single-shot, judgment-dense runs that survey a repository, decide module boundaries and author a whole roster, and you live inside that output for weeks. Everyday execution is the opposite: a repeated cost, paid daily, multiplied by every agent in every chain, which is what Sonnet 5 at `high` is designed around.
 
-**Why everyday work does not.** Workflow execution is a repeated cost, paid every day, multiplied by every agent in every chain. Sonnet 5 at `high` is what the roster is designed around and it is what makes the Max 5x plan a real option rather than a technicality. Opus 5 across the board is a genuine upgrade if your budget is not the binding constraint.
+**Fable 5 earns its price in daily use for pre-planning, and only pre-planning.** The plan is the highest-leverage thinking in the cycle, written once, inherited by every downstream agent. Drafting on Fable and executing on Sonnet is a good trade; a whole execution session on Fable is not.
 
-**Where Fable 5 earns its price in daily use: pre-planning, and only pre-planning.** Writing the plan is the highest-leverage thinking in the whole cycle, it happens once per plan, and every downstream agent inherits its quality. Drafting `plan.md` on Fable 5 and then executing it on Sonnet 5 is a good trade. Running an entire execution session on Fable 5 is not.
-
-**Effort is `high` for all four rows, and it is not a dial.** Reasoning effort is fixed once at session launch and governs the primary session and every sub-agent it spawns. From v3.4 there is one level and every roster agent runs at it. `xhigh` is retired. Set it at launch rather than mid-run: changing it mid-session writes to your global settings and leaks into other projects and parallel sessions.
+**Effort is `high` everywhere and is not a dial.** It is fixed at session launch and governs the primary session and every sub-agent; `xhigh` is retired. Set it at launch, since changing it mid-session writes to your global settings and leaks into other projects and parallel sessions.
 
 ---
 
@@ -198,109 +220,87 @@ claude --model sonnet --effort high     # everyday work with the installed team
 
 ### First run
 
-Type `/phanes` in your project. It scans the repository and builds the whole agentic team and documentation structure around it. Three things make the first run land well.
+Type `/phaneslight` in your project. Three things make it land well:
 
-- **Start the session on Opus 5 at `high` reasoning effort.** Launch with `claude --model opus --effort high` (or export `CLAUDE_CODE_EFFORT_LEVEL=high` before starting). Fable 5 is better still if you can afford it. The first run is the one that decides your module boundaries and authors your whole agent roster, and you live inside that output for weeks, so it is the run worth spending on. See [Which model for which run](#which-model-for-which-run) for the full table. `xhigh` is retired; there is no hotter setting to reach for. Set effort at launch rather than mid-run: changing it mid-session writes to your global settings and leaks into other projects and parallel sessions.
-- **Give it something to read, ideally a plan.** On an empty or brand-new repository, create at least a `plan.md` that describes what you want to build. Phanes reads it to understand the project's purpose and shapes the entire setup, including the agents, the workflows, and the module layout, around the project you actually intend to build rather than around an empty folder. **Best results come from a plan written as numbered steps grouped into phases**, each step with a clear boundary and each phase with a clear exit condition. That is the shape the run is designed to consume, and it is what lets the Orchestrator batch the work cleanly once execution starts (see the [diagram above](#what-it-does)).
-- **Steer it if you like.** Anything you type right after the command is treated as a directive and takes priority over the defaults, so you can inject your own needs into the setup. For example: `/phanes focus on the api/ module; skip pre-commit hook install`.
+- **Start on Opus 5 at `high` effort** (`claude --model opus --effort high`). The first run decides your module boundaries and authors your whole roster, and you live inside that for weeks.
+- **Give it something to read, ideally a plan.** On an empty repository, create at least a `plan.md` describing what you want to build, so the setup is shaped around the project you intend rather than an empty folder. **Numbered steps grouped into phases** is the shape the run is designed to consume.
+- **Steer it.** Anything typed after the command is a directive that takes priority over defaults: `/phaneslight focus on the api/ module; skip pre-commit hook install`.
 
-When the run finishes, restart your Claude Code session so the enforcement hooks arm. Phanes reminds you to.
+Restart your session when it finishes so the hooks arm.
 
-### Re-running `/phanes`: when, and how often
+### Re-running `/phaneslight`
 
-Think of `/phanes` as refreshing Claude's knowledge of your project. Every run surveys the codebase again and brings the agent team, the workflows, and the registries back in line with reality. **Launch an update run on Opus 5 too**, for the same reason the first run wants it: it is deciding what your team looks like, not using it.
+Think of it as refreshing Claude's knowledge of your project. **Launch update runs on Opus 5 too** — they are deciding what your team looks like, not using it.
 
-**From v3.4 a re-run measures before it rebuilds** (Windows). It opens by asking what has actually moved since the last run: the installed spec version, the capability census, the hook table, the register, file hashes, and the git history since the last recorded run. If nothing moved and your worktree is clean, the run verifies rather than regenerates, which makes a habitual re-run cheap enough to be habitual. If something did move, only the artifacts that change implicates are rebuilt, and the run tells you which sensor triggered each one. Where it cannot see (no git repository, or no recorded previous run) it does the full pass exactly as before, because not knowing is not the same as nothing having changed.
+**A re-run measures before it rebuilds** (Windows). It opens by asking what actually moved: spec version, capability census, hook table, register, file hashes, git history since the last run. Nothing moved and a clean worktree means it verifies rather than regenerates, which makes a habitual re-run cheap enough to be habitual. Where it cannot see (no git, no recorded previous run) it does the full pass, because not knowing is not the same as nothing having changed.
 
-- **Early, small project: run it freely.** Several times a day is fine. While the codebase is small a run costs little in tokens and context, and keeping the agent team current pays off constantly.
-- **Before an implementation plan.** This is a good habit rather than a hard rule, and it is the highest-value run of them all. Write your plan first, say for a new module, as numbered steps grouped into phases, then run `/phanes` and inject it. Injecting simply means pasting the plan's contents, or its path, right after the command. Phanes updates the agents and workflows, and creates new ones where needed, so the team is tuned to execute exactly that plan when you start. Then hand the same plan to the run that executes it and let it work through the steps in order.
-- **Session bookends.** Running it at the end of a workday, or first thing when you sit down, keeps the project context fresh before real work begins.
-- **Grown project: throttle down.** Once the codebase is large, once or twice a day is plenty. Add a run right before a large plan. Smaller ones usually do not need one.
+- **Early, small project:** run it freely, several times a day.
+- **Before an implementation plan** — the highest-value run of all. Write the plan, then run `/phaneslight` and paste the plan or its path after the command, so the team is tuned to execute exactly it.
+- **Session bookends:** end of a workday, or first thing next morning.
+- **Grown project:** once or twice a day, plus one before a large plan.
 
-## Core principles enforced by Phanes
+---
 
-- **Procedure in scripts, judgment in prompts, and hooks at the harness layer.** Any rule a script can enforce, such as line-count limits, header stamps, registry edits, API diffs, and documentation ceilings, lives in `.phanes/scripts/`. The hooks in settings.json make the critical ones impossible to skip: a blocking stamp guard, an advisory size check, and from v3.4 on Windows a session-start check that tells you when a previous run died mid-flight. That third one prints nothing at all in the normal case, which is the point; you hear from it only when there is something to hear. Mechanical rules written into prompts get forgotten under context pressure. Scripts do not forget, and hooks cannot be skipped.
-- **Single writer per artifact.** Every registry file, snapshot, and summary has exactly one writing agent, and so does every generated `_index.md`, whose sole writer is `phanes doc-index`. Many readers, one writer.
-- **No direct code changes by sub-agents, at any tier.** A coding agent emits a report that contains a proposed diff, a Critic reviews it, and the Executor applies it. The depth of the review scales with the tier, but the review itself is never skipped. The primary Claude Code agent does not edit code directly either. It orchestrates. Every Critic review closes with two mandatory verdicts, one for spec compliance and one for quality, and a report that is missing either verdict is returned unread.
-- **No UI approval by prose.** A UI proposal has to declare its target viewports and reference designs up front. After the change is applied, a designated visual verifier captures before and after screenshots and runs an explicit pass or fail checklist. "Looks good" is not evidence. When the capture tooling is missing or broken, the failure is diagnosed, remembered for later sessions, and the result is marked as visually unverified rather than passed silently.
-- **Context injection over context inheritance.** A sub-agent receives only the slice of context that its tier allows, and it pulls bulky material through read-only scout digests instead of loading it raw. Pollution from a sibling task is structurally impossible.
-- **Bounded fan-out.** No more than 5 sub-agents run at once, whatever the harness would allow. A genuinely wider sweep is handed to the harness's own large-scale orchestration by recommending it to you, never by an orchestrator quietly multiplying its own fan-out. Every session summary records the run's fan-out ledger.
-- **Compaction survival.** Long sessions compact, and a summarized mandate is a forgotten mandate. A run keeps a phase-by-phase progress ledger on disk and resumes from it after a mid-flight death. A run that can no longer see the spec's exact text re-reads it from disk instead of executing a lossy summary of itself.
-- **Index-first documentation navigation.** No agent ever bulk-reads `documentation/`. It descends the indexes, loads the target, and reads nothing else.
+## Core principles enforced by PhanesLight
+
+- **Procedure in scripts, judgment in prompts, hooks at the harness layer.** Any rule a script can enforce lives in `.phaneslight/scripts/`, and hooks make the critical ones unskippable: a blocking stamp guard, an advisory size check, and on Windows a session-start check that speaks only when a previous run died mid-flight. Mechanical rules in prompts get forgotten under context pressure. Scripts do not forget; hooks cannot be skipped.
+- **Durable returns (v3.6.1).** Every sub-agent return is written to `.phaneslight/returns/` **before the next dispatch**, verbatim. Bounded fan-out governs how many agents run; nothing governed **durability**, and that was where runs lost their most expensive work: a return lives in exactly one place, the spawner's context, and that context has a ceiling it is guaranteed to reach. Three incidents cost 66 rows of reconstruction triage. Once the rule was explicit, the same run survived three consecutive API crashes with zero loss.
+- **Model degradation is documented (v3.6.1).** "Fixed by role" governs the *choice*, not the *availability*. An unreachable pinned model is retried with backoff, then substituted down a per-role ladder, recorded in three places. The reviewer's ladder goes **up** (Fable → Opus): review is load-bearing and the wrong axis to economize on.
+- **Verification is load-bearing, not polish (v3.6.1).** Worker dispositions are repeatedly overturned on review, and so occasionally is the orchestrator's own HIGH finding. That is the design working. Budget the review pass into the plan rather than the slack; worker output is not shippable as-received, and a pass that finds nothing is a successful pass, never grounds for skipping the next.
+- **Single writer per artifact.** Every registry file, snapshot, summary and generated `_index.md` has exactly one writing agent. Many readers, one writer.
+- **Write rights follow the lineup, and every edit is disclosed.** The orchestrator writes unrestricted; workers and mechanics only inside a dispatched scope, naming every edit; the reviewer never writes; closure never writes code. An undisclosed edit is reported as drift.
+- **No UI approval by prose.** A proposal declares its viewports and reference designs up front; after apply, closure captures and runs an explicit pass/fail checklist. "Looks good" is not evidence. Missing capture tooling is diagnosed, remembered, and marked visually unverified rather than passed silently.
+- **Context injection over inheritance.** A sub-agent receives only the slice its tier allows and pulls bulky material through a mechanic digest. **(v3.6.1)** That digest is *unverified* material, not a source: any fact from one heading into a durable document is re-derived first, and counting tasks in particular are a false economy at that tier.
+- **Bounded fan-out.** No more than 5 sub-agents at once, whatever the harness allows. A wider sweep is recommended to you, never quietly self-multiplied. Every session summary records the fan-out ledger.
+- **Compaction survival.** A run keeps a phase ledger on disk and resumes from it after a mid-flight death, and re-reads the spec from disk the moment it can no longer see its exact text rather than executing a lossy summary of itself.
+- **Index-first navigation.** No agent bulk-reads `documentation/`. It descends the indexes, loads the target, and reads nothing else.
 
 ---
 
 ## For inexperienced users: step-by-step from zero
 
-Never used Claude before? This takes you from no account at all to a running Phanes install. Experienced Claude Code users can skip straight to [How to install](#how-to-install) below.
+Experienced Claude Code users can skip to [How to install](#how-to-install).
 
-### Step 1: Create a Claude account
+**1. Create a Claude account** at [claude.ai](https://claude.ai).
 
-Go to [claude.ai](https://claude.ai) and sign up with an email or a Google account.
+**2. Get a plan that can carry PhanesLight.** A single task can run chains of several Claude instances, each using part of your allowance. **Pro is not enough.** You need **Claude Max 5x** (workable entry point), **Claude Max 20x** (recommended headroom), or the **Claude API** pay-per-token at [console.anthropic.com](https://console.anthropic.com) — bearing in mind multi-agent orchestration uses far more tokens than ordinary chat. Check current pricing on the official pages.
 
-### Step 2: Get a plan that can carry Phanes
-
-Phanes is a multi-agent system. A single task can run chains of several Claude instances, such as a planner, a coder, a critic, an executor, and a monitor, and each of them uses part of your allowance. **The Pro plan is not enough**, since its limits run out after a few chains. You need one of these:
-
-- **Claude Max 5x**, the workable entry point for lighter projects.
-- **Claude Max 20x**, recommended, with comfortable headroom for real multi-agent work. Subscribe under Settings, then Plan, at claude.ai.
-- **Claude API, pay per token.** Create an account at [console.anthropic.com](https://console.anthropic.com) and add credits. Be aware that multi-agent orchestration uses far more tokens than ordinary chat, and the cost scales with how hard you drive it.
-
-Check current pricing on the official pages, since plans and limits change.
-
-### Step 3: Install Claude Code
-
-**macOS / Linux:**
+**3. Install Claude Code.**
 
 ```bash
-curl -fsSL https://claude.ai/install.sh | bash
+curl -fsSL https://claude.ai/install.sh | bash          # macOS / Linux
 ```
-
-**Windows (PowerShell):**
-
 ```powershell
-irm https://claude.ai/install.ps1 | iex
+irm https://claude.ai/install.ps1 | iex                 # Windows
 ```
 
-If you already use Node.js 18 or newer, you can instead run `npm install -g @anthropic-ai/claude-code`. Make sure `git` is installed too ([git-scm.com](https://git-scm.com)), because Phanes requires it.
+With Node.js 18+ you can instead run `npm install -g @anthropic-ai/claude-code`. Install `git` too ([git-scm.com](https://git-scm.com)); PhanesLight requires it. Verify with `claude --version`.
 
-Verify the install with:
+**4. Sign in.** Run `claude` in any project folder and follow the prompt, or type `/login`. Choose **Claude account** for Max, **Anthropic Console** for API.
 
-```
-claude --version
-```
-
-### Step 4: Sign in
-
-Open a terminal in any project folder, run `claude`, and follow the login prompt, or type `/login`. Choose **Claude account** if you subscribed to Max, or **Anthropic Console** if you are paying per token through the API.
-
-### Step 5: Install Phanes
-
-Continue with [How to install](#how-to-install) directly below. It is two commands.
+**5. Install PhanesLight** — continue directly below. It is two commands.
 
 ---
 
 ## How to install
 
-Phanes is a single Markdown file, `phanes.md`, so installing it just means putting it where Claude Code can run it as a slash command.
-
 ### Prerequisites
 
 - [Claude Code](https://claude.com/claude-code), installed and authenticated.
-- `git`, plus whichever language toolchain your project actually uses.
-- On **Windows, PowerShell** (5.1 or newer, which ships with Windows). The Phase 0 pre-flight runs its install commands through PowerShell there. POSIX systems use any standard shell.
-- Optional but strongly recommended: `uv`, which runs both the `serena` and `semble` MCP servers. The Phase 0 pre-flight installs it for you if it is missing.
+- `git`, plus your project's own language toolchain.
+- On **Windows, PowerShell 5.1+** (ships with Windows); the pre-flight runs its install commands through it. POSIX uses any standard shell.
+- Recommended: `uv`, which runs the `serena` and `semble` MCP servers. The pre-flight installs it if missing.
 
-### Install as a user-level slash command (recommended)
+### As a user-level slash command (recommended)
 
-This makes `/phanes` available in every repository you open.
+Makes `/phaneslight` available in every repository.
 
 **Linux / macOS:**
 
 ```bash
 mkdir -p ~/.claude/commands
-curl -L https://raw.githubusercontent.com/Aloim/phanes/main/phanes.md \
-  -o ~/.claude/commands/phanes.md
+curl -L https://raw.githubusercontent.com/Aloim/phaneslight/main/phaneslight.md \
+  -o ~/.claude/commands/phaneslight.md
 ```
 
 **Windows (PowerShell):**
@@ -308,141 +308,137 @@ curl -L https://raw.githubusercontent.com/Aloim/phanes/main/phanes.md \
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\commands" | Out-Null
 Invoke-WebRequest `
-  -Uri https://raw.githubusercontent.com/Aloim/phanes/main/phanes.md `
-  -OutFile "$env:USERPROFILE\.claude\commands\phanes.md"
+  -Uri https://raw.githubusercontent.com/Aloim/phaneslight/main/phaneslight.md `
+  -OutFile "$env:USERPROFILE\.claude\commands\phaneslight.md"
 ```
 
-### Install per project (alternative)
-
-If you only want Phanes inside one repository and want it tracked in version control:
+### Per project (alternative)
 
 ```bash
 mkdir -p .claude/commands
-curl -L https://raw.githubusercontent.com/Aloim/phanes/main/phanes.md \
-  -o .claude/commands/phanes.md
+curl -L https://raw.githubusercontent.com/Aloim/phaneslight/main/phaneslight.md \
+  -o .claude/commands/phaneslight.md
 ```
 
 ### Run it
 
-Open the target repository in Claude Code, then type:
+Open the repository in Claude Code and type `/phaneslight`. Anything after the command is forwarded through `$ARGUMENTS` and takes priority over the default plan:
 
 ```
-/phanes
+/phaneslight focus on the api/ module; skip pre-commit hook install
 ```
 
-Anything you add after the command is forwarded through `$ARGUMENTS` and takes priority over the default plan, so you can steer the run:
+The first run takes several minutes, pauses to confirm module boundaries and hook install, and ends by asking you to restart the session. Later runs are faster; only differences are written.
 
-```
-/phanes focus on the api/ module; skip pre-commit hook install
-```
-
-The first run takes several minutes. It pauses to confirm a few choices, such as module boundaries and hook install, and ends by asking you to restart the session so the enforcement hooks arm. Later runs are faster, since only the differences are written.
-
-### What gets created on the first run
+### What gets created
 
 ```
 your-repo/
 ├─ documentation/        # project memory, navigated by index, never bulk-read
-│  ├─ _index.md          #   generated index (sole writer: phanes doc-index)
+│  ├─ _index.md          #   generated index (sole writer: phaneslight doc-index)
 │  ├─ session-summaries/ #   SS0000N run records
 │  ├─ plans/             #   dated implementation plans
 │  ├─ snapshots/         #   dated architecture snapshots
-│  └─ registry/          #   curated API registry (sole writer: Architect)
+│  └─ registry/          #   curated API registry (sole writer: orchestrator)
 ├─ tests/                # unit · integration · e2e · fixtures · helpers
-├─ .phanes/              # scripts, config, and machine-owned state
-│  ├─ scripts/           #   cli.js (cross-shell entry) · new-file · doc-index · loc/doc/register-check · hook-*
-│  │                     #   Windows also: preflight · update-preflight · install-templates · scaffold
-│  │                     #   ledger · manifest-write · census-diff · repo-manifest · batch-apply
-│  ├─ registry/          #   generated API baseline (sole writer: close-verifier)
-│  ├─ inventory/         #   source file list + one-line summaries (phanes repo-manifest, Windows)
+├─ .phaneslight/         # scripts, config, and machine-owned state
+│  ├─ scripts/           #   cli.js · new-file · doc-index · loc/doc/register-check · hook-*
+│  │                     #   Windows also: preflight · update-preflight · install-templates
+│  │                     #   scaffold · ledger · manifest-write · census-diff · repo-manifest
+│  │                     #   batch-apply
+│  ├─ registry/          #   generated API baseline (sole writer: closure)
+│  ├─ returns/           #   durable sub-agent returns, per run (v3.6.1)
+│  ├─ inventory/         #   source file list + one-line summaries (Windows)
 │  ├─ config.json        #   confirmed modules · language · build system
-│  ├─ manifest.json      #   installed-artifact provenance: what Phanes owns, and its hashes
+│  ├─ manifest.json      #   installed-artifact provenance and hashes
 │  └─ run-progress       #   phase ledger for crash / compaction resume
 ├─ .claude/              # harness wiring
-│  ├─ agents/            #   6-10 deeply scoped expert personas
-│  ├─ workflows/         #   YAML agent chains: the single source of truth
+│  ├─ agents/            #   the five fixed agents of the lineup
+│  ├─ workflows/         #   YAML task sequences; §IV governs routing
 │  ├─ settings.json      #   stamp-guard (blocking) + size-check (advisory) hooks
 │  │                     #   Windows also: ledger-status (SessionStart, silent unless a run died)
-│  ├─ template/          #   fetched prompt templates: agent-definition · report · readme/doc blocks
-│  └─ .phanes            #   run counter + install-state marker (hidden)
+│  ├─ template/          #   fetched prompt templates
+│  └─ .phaneslight       #   run counter + install-state marker (hidden)
 ├─ CLAUDE.md             # root: orchestration mandates; modules: local guidance
 └─ CLAUDE.local.md       # live register of work in motion (35k/40k char budget)
 ```
 
-The default `.gitignore` shipped with this repository excludes `.claude/`, `.phanes/`, and other runtime artifacts. Adjust it to taste in your own project.
+The shipped `.gitignore` excludes `.claude/`, `.phaneslight/` and other runtime artifacts. Adjust to taste.
 
 ---
 
 ## Upgrading an older install
 
-If a project already carries an older Phanes installation (any version), install the upgrader alongside `/phanes`:
+Install the upgrader alongside `/phaneslight`:
 
 **Linux / macOS:**
 
 ```bash
-curl -L https://raw.githubusercontent.com/Aloim/phanes/main/PhanesUpgrade.md \
-  -o ~/.claude/commands/phanesupgrade.md
+curl -L https://raw.githubusercontent.com/Aloim/phaneslight/main/PhanesLightUpgrade.md \
+  -o ~/.claude/commands/phaneslightupgrade.md
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 Invoke-WebRequest `
-  -Uri https://raw.githubusercontent.com/Aloim/phanes/main/PhanesUpgrade.md `
-  -OutFile "$env:USERPROFILE\.claude\commands\phanesupgrade.md"
+  -Uri https://raw.githubusercontent.com/Aloim/phaneslight/main/PhanesLightUpgrade.md `
+  -OutFile "$env:USERPROFILE\.claude\commands\phaneslightupgrade.md"
 ```
 
-**Run the upgrade on Opus 5 at `high` effort**, or Fable 5 if you can afford it (see [Which model for which run](#which-model-for-which-run)). An upgrade performs file surgery on knowledge your project cannot re-earn if it is lost, which makes it the worst run in this library to economize on.
+**Run the upgrade on Opus 5 at `high` effort.** It performs file surgery on knowledge your project cannot re-earn, which makes it the worst run in this library to economize on.
 
-Then open the project and run `/phanesupgrade`. It refreshes your `/phanes` command, detects the installed version, plans the jump from the changelog, and computes exactly what to archive, generate, and regenerate from the installed-artifact manifest. Everything runs on a dedicated `phanes-upgrade-<date>` branch behind an evidence-verified checklist. Your accumulated knowledge is preserved byte for byte, superseded artifacts are archived rather than deleted, and you review and merge the branch yourself. The only precondition is a clean `git status`.
+Then open the project and run `/phaneslightupgrade`. It refreshes your `/phaneslight` command, detects the installed version, plans the jump from the changelog, and computes exactly what to archive, generate and regenerate from the installed-artifact manifest. **From v3.6.1 it also performs the name migration (`.phanes/` → `.phaneslight/`) and the repository migration, repointing every distribution URL at `Aloim/phaneslight`.** Everything runs on a dedicated `phaneslight-upgrade-<date>` branch behind an evidence-verified checklist; knowledge is preserved byte for byte, superseded artifacts are archived rather than deleted, and you review and merge the branch yourself. The only precondition is a clean `git status`.
 
-You normally get here from `/phanes` itself: whenever a newer Phanes has shipped, the version check at the start of every run offers the upgrade and routes you here.
+You normally get here from `/phaneslight` itself: whenever a newer version has shipped, the version check at the start of every run offers the upgrade and routes you here.
 
 ---
 
 ## Companion tools
 
-Phanes is built to stay modular. Rather than growing the core file, capabilities beyond bootstrapping ship as **companion tools**. Every companion is a full standalone tool that works on its own, in any repository, with no Phanes install. Each one is also built to cooperate with the structures Phanes generates, so together they form one ecosystem.
+PhanesLight stays modular: capabilities beyond bootstrapping ship as **companion tools**. Each is a full standalone tool that works in any repository with no PhanesLight install, and each also cooperates with the structures PhanesLight generates.
 
-- **[Charon](https://github.com/Aloim/charon)** finds dead code, unused files, unused dependencies, and duplicated code, then writes an evidence-backed audit report without touching anything. Standalone `/charon` command for any repository; in a Phanes-managed project the report is filed into the documentation tree, open items land in the session summary, and dead exported APIs are proposed as registry annotations. Worth running before large refactors, since stale code is context poison for agents.
-- **[Philia](https://github.com/Aloim/philia)** shares a Windows terminal in the browser for collaborative or remote vibecoding: a password-protected public link, shared terminal tabs, and a side chat, tunneled from your own PC with nothing for guests to install. Share a Phanes-managed project and everyone drives the same agent team together, while the host keeps a kill switch and a live indicator.
-- **[Mosyn](https://github.com/Aloim/mosyn)** gives Claude Code agents a shared, disciplined project memory on decentralized storage (Walrus and SEAL): recall before acting, decision and failure logging, and schema-locked session distillation with an append-only audit trail. Alongside Phanes it hands the whole agent team one durable memory across sessions, machines, and teammates.
-- **[Metis](https://github.com/Aloim/metis)** reads Claude Code's own run transcripts and reports whether your agent team actually used the tools and workflows it was told to, harvesting the short-lived subagent transcripts before the harness discards them. Standalone `/metis` command; in a Phanes-managed project the capability census detects it, and update runs have it verify past suggestions and file an adherence report the run acts on.
+- **[Charon](https://github.com/Aloim/charon)** — finds dead code, unused files and dependencies, and duplication, then writes an evidence-backed audit report without touching anything. In a PhanesLight project the report is filed into the documentation tree and dead exported APIs become proposed registry annotations. Worth running before large refactors: stale code is context poison for agents.
+- **[Philia](https://github.com/Aloim/philia)** — shares a Windows terminal in the browser for collaborative or remote vibecoding: a password-protected link, shared tabs and a side chat, tunneled from your own PC with nothing for guests to install. The host keeps a kill switch and a live indicator.
+- **[Mosyn](https://github.com/Aloim/mosyn)** — a shared, disciplined project memory on decentralized storage (Walrus and SEAL): recall before acting, decision and failure logging, schema-locked session distillation with an append-only audit trail. Alongside PhanesLight it gives the whole team one durable memory across sessions, machines and teammates.
+- **[Metis](https://github.com/Aloim/metis)** — reads Claude Code's own run transcripts and reports whether your team actually used the tools and workflows it was told to, harvesting short-lived subagent transcripts before the harness discards them. In a PhanesLight project the census detects it and update runs act on its adherence report.
 
 ---
 
 ## Recommended third-party enhancements
 
-Phanes never installs these. The capability census discovers them only if you installed them yourself, and the matching rubric wires them into exactly the agents whose duties they serve, under least privilege and never as a hard dependency. All were verified as actively maintained on 2026-07-15, so re-check before adopting one. Code search is absent because Phanes installs `semble` itself; a rival code-index server is granted only where it beats `semble` for your stack, and then in its place, since one job should carry one schema tax.
+PhanesLight never installs these. The census discovers them only if you installed them, and wires them into exactly the agents whose duties they serve, under least privilege, never as a hard dependency. **(v3.6.1)** The stack-match gate is now hard: a capability that cannot complete the sentence "granted because this project has ___" is not granted and not listed. All were verified actively maintained on 2026-07-15; re-check before adopting. Code search is absent because PhanesLight installs `semble` itself.
 
-- **Shell-output compressors** (for example RTK) run as a PreToolUse proxy that strips noise from build, test, and git output before it reaches any agent's context, while preserving errors and diffs in full. In measurements from July 2026 this removed about 89 percent of the noise on average. It helps every agent that runs shell commands and needs no Phanes wiring at all.
-- **Usage monitors** (for example claude-hud and claude-monitor) show live context fill and rate-limit forecasting alongside long multi-agent runs. They are purely observational and cost no tokens, which makes them useful company for any Phanes bootstrap on a subscription plan.
-- **CLAUDE.md linters** (for example cclint) validate the instruction files Phanes generates on the CI side, catching things like deprecated model identifiers, broken imports, and leaked keys.
+- **Shell-output compressors** (e.g. RTK) — a PreToolUse proxy stripping noise from build, test and git output before it reaches any agent's context, preserving errors and diffs in full. Measured at ~89% noise removal in July 2026. Helps every agent that runs shell commands; needs no wiring.
+- **Usage monitors** (e.g. claude-hud, claude-monitor) — live context fill and rate-limit forecasting alongside long runs. Purely observational, zero token cost.
+- **CLAUDE.md linters** (e.g. cclint) — validate the instruction files PhanesLight generates on the CI side, catching deprecated model identifiers, broken imports and leaked keys.
 
 ---
 
 ## Version
 
-Current: **v3.4.1** (2026-08-23). A patch about when an observation should create no further work. A field report from a downstream project measured three consecutive plan steps and found agent dispatches going 8, 13, 17, Critic passes 1, 3, 4, and review prose reaching four lines per line of code, with the plan's scope estimate missed by 9.5x and the same "still owed" list copied verbatim into every session summary. The reviewers were catching real bugs; the roles that run on Opus (architect, Critic, security auditor, Orchestrator) simply had no threshold below which a finding stays a note. v3.4.1 adds five: acceptance criteria are tests or structural checks, never token counts over the tree; the Reflect loop is capped at two passes, after which a fresh producer rewrites the file whole instead of patching a patch; security findings are graded and only CRIT, HIGH and MED create work, with LOW and INFO staying in the report and the auditor closing on an explicit "no further findings" line; the Critic and auditor write their reports to `reports/reviews/` (resolving a contradiction between §IV and the Critic grant that had forced every verdict into the session summary) and the batch session summary is capped at verdicts and pointers, about 150 lines, with a carry-over rule so open items are scheduled or dropped rather than copied a third time; and a design that comes back at four times the plan's stated scope halts the step for re-planning instead of being recorded and absorbed. Chain composition, review presence, the two mandatory verdicts, the security pass cardinality and the receipt schema are untouched. The report and the diagnosis against v3.4.0 are kept in the internal project records.
+**Current: v3.6.1** (2026-09-03) — renaming, repository migration, and a workflow update. See the [notice at the top](#️-v361--renaming-repository-migration-and-a-workflow-update) for the migration; the rest of the release fixes thirteen defects found in production use, across tooling, orchestration, bootstrap quality and cheap-tier calibration.
 
-Beneath it: **v3.4.0** (2026-08-05). A release about doing less work per run. Phanes has always told a session to enumerate, fetch, install, verify and record, and doing that by hand costs thirty to fifty tool calls of pure procedure and produces a slightly different result every time. **Ten new commands do that work instead** (Windows this cycle), and the update run stops regenerating everything and starts measuring what actually moved: same version, same capabilities, same hooks, clean worktree, nothing new in git since the last run means the run verifies rather than rebuilds. Where it cannot see, it does the full pass, because not knowing is not the same as nothing having changed. Also new: a **session-start check** that tells you when a previous run died mid-flight, silent in every other case; **`repo-manifest`**, a source inventory agents consult before sweeping the repository with grep; **`batch-apply`**, which applies many edits in one call with a saved pre-image rather than git as its undo; and **stale-customization detection**, which tells you when a file you customized was a workaround for something since fixed upstream, without ever overwriting your edit. Motivated by a real project found sitting on two files customized around five defects that had been fixed upstream the next day, with the safety mechanism dutifully protecting it from every fix since. **The mechanized bootstrap is Windows-only in v3.4** and the POSIX manual flow is unchanged, so no POSIX project loses anything; the ten commands are refused by name there rather than faked. This release also **absorbs v3.3.2**, which was completed and never published, so everything below is folded in and attributed since v3.3.1. The full accounting is in [`Changelog.md`](Changelog.md).
+**Tooling:** `new-file` selects its header by *destination* rather than by a magic module name, so a Markdown file under `documentation/` gets the DOC discipline header whatever module was named, and says so rather than promoting silently. `doc-index` orders by filename instead of modification time, so the index can answer "which is the latest" and editing an old document stops reordering the whole file. `register-check` renames its completed-entry finding to `COMPLETED-NOT-ARCHIVED` and explains itself, resolving a contradiction where the register legend advertised a marker whose use the checker reported as a finding. `loc-check` always terminates with a count line, so a truncated tail carries the number. Closure's write surface is documented exhaustively, since "output is a flag, never a fix" is a claim about judgment, not about the file system.
 
-Folded in from **v3.3.2** (completed 2026-07-28, never released): a bug-fix pass and three spec changes, both prompted by a bug report from a downstream project against v3.3.1. Four confirmed Windows script bugs are fixed: `doc-index.ps1` no longer crashes on a documentation folder past 100 files (a case-insensitive local variable was shadowing the script's own ceiling constant at the point the oversized slice is read), DOC-header reads are UTF-8 explicit so non-ASCII text stops mojibaking, every generated file writes UTF-8 without a byte-order mark, and `doc-check` no longer undercounts files with many blank lines past the 500-line ceiling. The POSIX index script now rotates newest-first like Windows instead of by filename. A new optional `doc_discipline` config block (`index_exclusions`, `frozen_classes`) lets a project mark documentation subtrees excluded from indexing or exempt from the ceiling check. **Two breaking changes:** `phanes new-file` now refuses an unknown module name, and refuses a `docs` target that resolves outside `docRoot`, the fix for a genuine defect the report called A6 (the script alone never honored the long-standing `docRoot` key that `doc-index` and `doc-check` have read since v2.6, so a docs target silently landed at the repository root); see [`PhanesUpgrade.md`](PhanesUpgrade.md) for the upgrade path. On the spec side, batching becomes **grouped, full stop**, sized by step scope rather than tier and composed for cohesion, with one combined security pass covering the whole batch diff whenever any step in it touches security; a spawned producer may now make a small in-scope edit on its own judgment and report it afterward instead of asking first; and the model and effort roster **flattens** to a single fixed level, Sonnet 5 at `high` for every agent except the plan-authoring chain and the security-review specialization, which run Opus 5 at `high`. `xhigh` and the per-agent effort-delivery bridge it required are retired; the removed machinery is preserved verbatim in the attic document [`documentation/specs/2026-07-28_retired-effort-bridge.md`](documentation/specs/2026-07-28_retired-effort-bridge.md) in case it is ever needed again. Three of the report's eight numbered findings (not four, A6 above was a real defect) were feature requests for config keys Phanes had never defined rather than bugs; the full, finding-by-finding accounting is in [`Changelog.md`](Changelog.md).
+**Orchestration:** durable returns, the documented degradation posture, the owner-owned `pinned:project` deviations block that survives regeneration, and a requirement that at least one workflow cover recurring maintenance rather than change-type work alone.
 
-Further beneath: **v3.3.1** (2026-07-27) finished the batching work v3.3 started. v3.3 gave the Orchestrator a dial for how many plan steps a batch covers and left a second one missing: whether those steps run one chain each or one chain between them. **Grouped batch execution** added it. Where every step in a batch was small (T1 or T2), none touched security, and none edited a file another one edited, the batch ran as a single chain, one producer turn, one review, one apply, instead of paying the same three turns over for each step. Three small steps stopped costing six or twelve agent turns and cost two or four instead. Nothing was skipped to get there: the Critic returned its two verdicts **per step** so no step lost its review, the Executor applied step by step so a failure still named exactly which one broke, and rework re-reviewed only the steps that actually failed. The v3.3.2 work folded in above replaces the gate with grouping by default; per-step is now the exception rather than the rule.
+**Bootstrap and calibration:** a bootstrap snapshot may no longer state a bare negative — markers are phrased as unverified negatives with their method named, and the prose is searched before one is written. Mechanic digests are documented as unverified material requiring re-derivation before anything from them is written into a durable document. Serena is granted only where its language servers cover the stack.
 
-Further beneath: **v3.3** (2026-07-26) made four corrections to the orchestration economics: batch renegotiation (the architect that plans a batch's first step resizes the batch to match true scale, adopted by default), agent persistence (worker agents resumed rather than respawned, saving a measured entry tax of roughly 80,000 tokens per avoided respawn), bounded Critic self-fix for trivia, and relative effort (recommended launch **Opus 5 at `medium`**, agents authored as rungs against that dial, the Orchestrator free to lift one a rung where a step earned it). The v3.3.2 work folded in above retires that relative scheme entirely in favor of one fixed level. v3.2.1 aligned the Model & Effort rubric with **Claude Opus 5** and added the session-effort recommendation and the Orchestrator branch in the workflow diagram; v3.2 added the top-anchored, delete-protected **Pinned Directives block** as the first content of every project's root `CLAUDE.md`, a **procedure-precedence rule** with a supersession-annotation pass, and the ephemeral **Orchestrator** that executes long plan runs in self-sized batches so the primary session stays slim enough to run across many phases without compacting; v3.1 gave Phanes its real upgrade path, routing version jumps to `/phanesupgrade` (plan from the changelog, exact file operations from an installed-artifact manifest, on a branch you merge yourself) and prefixing agents with the project slug; v3.0.1 corrected the reasoning-effort rubric and added the CLI-spawn bridge for per-agent effort; v3.0 added the capability consent layer, the `close-verifier` rename, and the cross-shell `cli.js` launcher. The full release history is in [`Changelog.md`](Changelog.md), and every superseded version is archived verbatim in [`older version/`](older%20version/).
+Full accounting, and the complete release history from v2.1 onward, in [`Changelog.md`](Changelog.md). The last pre-ladder distribution is kept whole in [`older version/v3.4.1/`](older%20version/v3.4.1/); retired machinery is preserved verbatim in the project's internal records, together with the conditions under which it would be reinstated.
+
+**Immediately beneath: v3.6.0** (2026-09-03) retired the review chain. The Critic pass on every diff, the two mandatory verdicts, the Reflect loop, the separate security gate, the Synthesizer, and the domain roster of six to ten personas were all replaced by a fixed five-agent lineup named by model tier and an escalation ladder in which findings travel **upward by severity** instead of artifacts travelling sideways through gates. This is a deliberate reduction in review coverage traded for token economy; what stands in its place is disclosure plus independent re-derivation at close. The retired machinery is preserved verbatim in the project's internal records.
 
 ---
 
 ## License
 
-Phanes is released under the **Creative Commons Attribution-NonCommercial 4.0 International** license (see [`LICENSE`](LICENSE)).
+PhanesLight is released under the **Creative Commons Attribution-NonCommercial 4.0 International** license (see [`LICENSE`](LICENSE)).
 
-You are free to use, share, and adapt Phanes for any **non-commercial** purpose with attribution. Commercial use is not granted by this license. For commercial licensing terms, contact the author directly.
+You are free to use, share and adapt it for any **non-commercial** purpose with attribution. Commercial use is not granted by this license; contact the author directly for commercial terms.
 
 ---
 
 ## Contributing
 
-Issues and pull requests are welcome. A substantive change to `phanes.md` should explain which class of failure mode it closes, because Phanes is a defensive document and every clause is load-bearing.
+Issues and pull requests are welcome at [`github.com/Aloim/phaneslight`](https://github.com/Aloim/phaneslight). A substantive change to `phaneslight.md` should explain which class of failure mode it closes, because PhanesLight is a defensive document and every clause is load-bearing.

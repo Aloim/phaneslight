@@ -1,8 +1,9 @@
 #!/bin/sh
-# phanes-template v3.4.1 register-check
+# phaneslight-template v3.6.1 register-check
 # Measures the two hot files (root CLAUDE.md and CLAUDE.local.md) in characters and prints a status
 # line each: OK (below 35000), SOFT-BREACH (35000 to 40000), CROP-REQUIRED (above 40000). Also lists
-# every completed register entry (## checkmark heading) still present, reports the
+# every completed register entry (## checkmark heading) not yet archived (COMPLETED-NOT-ARCHIVED,
+# v3.6.1: the marker is legal, the unfinished close-out is the finding), reports the
 # standing-blocker section character count separately, and reports the Pinned Directives
 # block character count separately (v3.2, the root CLAUDE.md crop-exemption class).
 # Advisory: always exits 0.
@@ -24,14 +25,14 @@ count_chars() {
 find_root() {
   d=$(pwd)
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "$d/.phanes/config.json" ] && { printf '%s' "$d"; return 0; }
+    [ -f "$d/.phaneslight/config.json" ] && { printf '%s' "$d"; return 0; }
     d=$(dirname "$d")
   done
-  [ -f "/.phanes/config.json" ] && { printf '%s' "/"; return 0; }
+  [ -f "/.phaneslight/config.json" ] && { printf '%s' "/"; return 0; }
   return 1
 }
 
-root=$(find_root) || { echo "register-check: .phanes/config.json not found from this directory" >&2; exit 0; }
+root=$(find_root) || { echo "register-check: .phaneslight/config.json not found from this directory" >&2; exit 0; }
 
 # Without the counting tools every measurement would silently read 0 and every file would report OK.
 # Say so instead of lying, and still exit 0 (advisory).
@@ -66,9 +67,15 @@ for name in CLAUDE.md CLAUDE.local.md; do
   [ -z "$chars" ] && chars=0
   echo "$name: $chars chars [$(status "$chars")]"
 
-  # Completed entries still present.
+  # Completed entries not yet archived. Renamed from COMPLETED-STILL-PRESENT in v3.6.1 and given
+  # a reason clause, because the old wording read as "the marker you were told to use is a
+  # finding". It is not. The register legend advertises the completed marker as part of its
+  # vocabulary, and the marker is CORRECT at the instant it is written; what the register mandate
+  # forbids is the entry OUTLIVING it, since marking an entry complete and archiving it are
+  # required to be the same change set. The finding is about the missing archival half.
   grep -E "^##[[:space:]]" "$f" 2>/dev/null | grep -F "$MARK_DONE" 2>/dev/null | while IFS= read -r ln; do
-    echo "  COMPLETED-STILL-PRESENT: $ln"
+    echo "  COMPLETED-NOT-ARCHIVED: $ln"
+    echo "    (the marker is correct; the close-out is unfinished. Archive the entry to documentation/archive/projects/ and delete it here, in one change set.)"
   done
 
   # Standing-blocker section character count: first blocker heading to the next heading.

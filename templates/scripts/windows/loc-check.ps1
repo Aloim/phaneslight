@@ -1,28 +1,28 @@
-# phanes-template v3.4.1 loc-check
+# phaneslight-template v3.6.1 loc-check
 # Scans tracked source files and prints any over the 500 LOC soft ceiling with line counts.
 # With file arguments, checks only those files (this is how hook-size-check invokes it).
 # Advisory: always exits 0.
 $ErrorActionPreference = 'Stop'
 $SOFT_CEILING = 500
 
-function Find-PhanesRoot {
+function Find-PhanesLightRoot {
   $d = (Get-Location).Path
   while ($true) {
-    if (Test-Path -LiteralPath (Join-Path $d '.phanes\config.json')) { return $d }
+    if (Test-Path -LiteralPath (Join-Path $d '.phaneslight\config.json')) { return $d }
     $p = [System.IO.Path]::GetDirectoryName($d)
     if (-not $p -or $p -eq $d) { return $null }
     $d = $p
   }
 }
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('loc-check: .phanes/config.json not found from this directory'); exit 0 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('loc-check: .phaneslight/config.json not found from this directory'); exit 0 }
 
 $cfg = $null
 try {
-  $cfg = Get-Content -LiteralPath (Join-Path $root '.phanes\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
 } catch {
-  [Console]::Error.WriteLine('loc-check: .phanes/config.json is malformed, using defaults')
+  [Console]::Error.WriteLine('loc-check: .phaneslight/config.json is malformed, using defaults')
   $cfg = $null
 }
 $docRoot = 'documentation'
@@ -61,14 +61,14 @@ if ($args.Count -gt 0) {
 
 $rootNorm = Normalize((Resolve-Path -LiteralPath $root).Path)
 $docPrefix = $rootNorm.TrimEnd('/') + '/' + $docRoot.TrimEnd('/') + '/'
-$phanesPrefix = $rootNorm.TrimEnd('/') + '/.phanes/'
+$phaneslightPrefix = $rootNorm.TrimEnd('/') + '/.phaneslight/'
 
 $offenders = 0
 foreach ($f in $files) {
   $fn = Normalize((Resolve-Path -LiteralPath $f).Path)
-  # loc-check owns source; documentation is doc-check's domain, .phanes/ is machinery.
+  # loc-check owns source; documentation is doc-check's domain, .phaneslight/ is machinery.
   if ($fn.StartsWith($docPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
-  if ($fn.StartsWith($phanesPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+  if ($fn.StartsWith($phaneslightPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
   # Skip obvious binaries by extension.
   $ext = [System.IO.Path]::GetExtension($fn).ToLower()
   if ($ext -in @('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.exe', '.dll', '.bin', '.woff', '.woff2', '.ttf')) { continue }
@@ -82,5 +82,16 @@ foreach ($f in $files) {
   }
 }
 
-if ($offenders -eq 0) { Write-Output 'loc-check: OK' }
+# A terminating count line, always (v3.6.1). The offender list can run to dozens of lines, and a
+# reader who sees only the tail of it -- a truncated transcript, a scrolled terminal, a hook that
+# surfaced the last few lines -- has no way to know how many lines came before. That is not
+# hypothetical: a run counted 12 OVER-CEILING lines off a truncated tail when 19 had been printed,
+# and wrote the 12 into a document. The count is now the LAST thing printed, so the tail carries it.
+# Exit stays 0: this check is advisory by design, the ceiling is soft, and a non-zero exit here
+# would fail the pre-commit hook and CI on a threshold nobody intended as a gate.
+if ($offenders -eq 0) {
+  Write-Output 'loc-check: OK'
+} else {
+  Write-Output ("loc-check: {0} file(s) OVER-CEILING (soft ceiling {1} lines). Advisory, exit 0." -f $offenders, $SOFT_CEILING)
+}
 exit 0

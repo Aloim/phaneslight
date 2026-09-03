@@ -1,4 +1,4 @@
-# phanes-template v3.4.1 scaffold
+# phaneslight-template v3.6.1 scaffold
 # Mechanizes Phase 2.5 Steps 1, 1b, and 2: creates the documentation tree (under the
 # configured docRoot), the tests tree, and the four verbatim README files, reading the README
 # bodies from the installed prompt templates (.claude/template/readme-docs.md and
@@ -8,7 +8,7 @@
 # judgment (Pinned Directives, capability register) and the session remains their writer.
 # NOT advisory: exit 0 on success (including "nothing to do"); exit 1 when the project, config,
 # or a required template cannot be read, or when a write fails (the session then falls back to
-# writing the Step 1/1b/2 content from phanes.md directly). On a write failure the items already
+# writing the Step 1/1b/2 content from phaneslight.md directly). On a write failure the items already
 # created ARE listed before the error: "nothing created" is achievable for every pre-write
 # refusal and is NOT achievable once the eighth of nineteen writes fails, so the contract states
 # what the script can actually guarantee rather than a promise it would break in silence.
@@ -25,7 +25,7 @@ $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -39,7 +39,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -58,14 +58,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -86,7 +86,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -118,7 +118,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -167,7 +167,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -191,14 +191,14 @@ function Read-PhanesTextFile([string]$Path) {
 }
 # END SHARED core
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('scaffold: .phanes/config.json not found from this directory'); exit 1 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('scaffold: .phaneslight/config.json not found from this directory'); exit 1 }
 
 # Creating trees in the WRONG place is worse than refusing: a malformed config is exit 1
 # here, not a silent default (the docRoot decides where a whole tree lands).
-$cfgRead = Read-PhanesJsonFile (Join-Path $root '.phanes\config.json')
+$cfgRead = Read-PhanesLightJsonFile (Join-Path $root '.phaneslight\config.json')
 if ($cfgRead.Status -cne 'ok') {
-  [Console]::Error.WriteLine("scaffold: .phanes/config.json is $($cfgRead.Status) ($($cfgRead.Reason)); nothing created, repair the config first")
+  [Console]::Error.WriteLine("scaffold: .phaneslight/config.json is $($cfgRead.Status) ($($cfgRead.Reason)); nothing created, repair the config first")
   exit 1
 }
 $cfg = $cfgRead.Value
@@ -219,13 +219,13 @@ if ([System.IO.Path]::IsPathRooted($docRoot)) {
   [Console]::Error.WriteLine("scaffold: docRoot '$docRoot' is an absolute path; docRoot must be relative to the project root. Nothing created")
   exit 1
 }
-if (-not (Test-PhanesContained $root (Join-Path $root ($docRoot -replace '/', '\')))) {
+if (-not (Test-PhanesLightContained $root (Join-Path $root ($docRoot -replace '/', '\')))) {
   [Console]::Error.WriteLine("scaffold: docRoot '$docRoot' resolves outside the project root; nothing created")
   exit 1
 }
 
 # SECTION parser for the installed prompt templates. A missing or malformed template is a
-# refusal naming the file: the fallback (authoring from the phanes.md verbatim blocks) is the
+# refusal naming the file: the fallback (authoring from the phaneslight.md verbatim blocks) is the
 # session's judgment, not this script's.
 # The parser was weak in five ways, and every one of them writes WRONG CONTENT at exit 0 rather
 # than failing, which merge-never-overwrite then makes permanent: the bad file is never
@@ -286,7 +286,7 @@ $tplDir = Join-Path $root '.claude\template'
 function Read-Template([string]$name) {
   try { return (Get-Sections (Join-Path $script:tplDir $name)) }
   catch {
-    [Console]::Error.WriteLine("scaffold: .claude/template/$name is damaged ($($_.Exception.Message)); nothing created. Reinstall templates (phanes install-templates) or fall back to the phanes.md Step 1/1b/2 blocks")
+    [Console]::Error.WriteLine("scaffold: .claude/template/$name is damaged ($($_.Exception.Message)); nothing created. Reinstall templates (phaneslight install-templates) or fall back to the phaneslight.md Step 1/1b/2 blocks")
     exit 1
   }
 }
@@ -298,7 +298,7 @@ foreach ($pair in @(
     @('readme-tests.md', $testsTpl, @('tests-readme')),
     @('doc-header.md', $headerTpl, @('doc-discipline-header')))) {
   $fname = $pair[0]; $tpl = $pair[1]; $need = $pair[2]
-  if ($null -eq $tpl) { [Console]::Error.WriteLine("scaffold: .claude/template/$fname is missing or unreadable; nothing created. Install templates first (phanes install-templates) or fall back to the phanes.md Step 1/1b/2 blocks"); exit 1 }
+  if ($null -eq $tpl) { [Console]::Error.WriteLine("scaffold: .claude/template/$fname is missing or unreadable; nothing created. Install templates first (phaneslight install-templates) or fall back to the phaneslight.md Step 1/1b/2 blocks"); exit 1 }
   foreach ($s in $need) {
     if (-not $tpl.ContainsKey($s)) { [Console]::Error.WriteLine("scaffold: .claude/template/$fname lacks SECTION $s; nothing created (template damaged or from another version)"); exit 1 }
   }
@@ -323,7 +323,7 @@ function Fail-Scaffold([string]$item, [string]$why) {
 }
 function Ensure-Dir([string]$rel) {
   $full = Join-Path $script:root ($rel -replace '/', '\')
-  if (-not (Test-PhanesContained $script:root $full)) { Fail-Scaffold $rel 'resolves outside the project root' }
+  if (-not (Test-PhanesLightContained $script:root $full)) { Fail-Scaffold $rel 'resolves outside the project root' }
   if (Test-Path -LiteralPath $full) { [void]$script:skipped.Add($rel + '/'); return }
   try { New-Item -ItemType Directory -Force -Path $full -ErrorAction Stop | Out-Null }
   catch { Fail-Scaffold $rel $_.Exception.Message }
@@ -331,7 +331,7 @@ function Ensure-Dir([string]$rel) {
 }
 function Ensure-File([string]$rel, [string]$content) {
   $full = Join-Path $script:root ($rel -replace '/', '\')
-  if (-not (Test-PhanesContained $script:root $full)) { Fail-Scaffold $rel 'resolves outside the project root' }
+  if (-not (Test-PhanesLightContained $script:root $full)) { Fail-Scaffold $rel 'resolves outside the project root' }
   if (Test-Path -LiteralPath $full) { [void]$script:skipped.Add($rel); return }
   try { [System.IO.File]::WriteAllText((Join-Path $script:root ($rel -replace '/', '\')), $content, $UTF8_NO_BOM) }
   catch { Fail-Scaffold $rel $_.Exception.Message }
@@ -347,7 +347,7 @@ Ensure-File "$docRoot/registry/README.md" $docsTpl['registry-readme']
 
 # Step 1b: tests tree. Only the literal `tests/` layout is mechanical. When a DIFFERENT
 # conventional test directory already exists at the root, the merge is framework judgment
-# (phanes.md Step 1b) and stays with the session: report and leave it alone.
+# (phaneslight.md Step 1b) and stays with the session: report and leave it alone.
 $conventional = @('test', '__tests__', 'spec')
 $existingConv = $null
 foreach ($c in $conventional) {

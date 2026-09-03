@@ -1,6 +1,6 @@
-# phanes-template v3.4.1 manifest-write
-# Recomputes sha256 provenance for every installed script (.phanes/scripts/) and prompt
-# template (.claude/template/) and rewrites .phanes/manifest.json (schema: phanes.md Phase 5).
+# phaneslight-template v3.6.1 manifest-write
+# Recomputes sha256 provenance for every installed script (.phaneslight/scripts/) and prompt
+# template (.claude/template/) and rewrites .phaneslight/manifest.json (schema: phaneslight.md Phase 5).
 # Blessing the CURRENT disk state is this script's one job: drift detection against the
 # recorded state belongs to `update-preflight`; deciding whether drift was legitimate belongs
 # to the session. Entries of every other class (agents, workflows, commands, config-blocks,
@@ -21,7 +21,7 @@ $DROP_CAP = 20   # MW-7: cap on the stale-entry and collision lists printed to s
 # and DirectoryInfo.Parent returns $null at a drive root AND at a UNC share root, which gives
 # every walk below one honest termination condition instead of the compare-the-string-to-
 # itself idiom that cannot tell those two cases apart.
-function Get-PhanesStartDirectory {
+function Get-PhanesLightStartDirectory {
   $p = $null
   try { $p = $PWD.ProviderPath } catch { $p = $null }
   if ([string]::IsNullOrEmpty($p)) { try { $p = (Get-Location).Path } catch { $p = $null } }
@@ -35,7 +35,7 @@ function Get-PhanesStartDirectory {
 # script contractually bound to always exit 0 exits 1 with no output at all. Each candidate is
 # materialized as a DirectoryInfo so that every later comparison is FullName against FullName,
 # both already canonical.
-function Get-PhanesHomeDirectory {
+function Get-PhanesLightHomeDirectory {
   $cands = @()
   if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $cands += $env:USERPROFILE }
   if ((-not [string]::IsNullOrWhiteSpace($env:HOMEDRIVE)) -and (-not [string]::IsNullOrWhiteSpace($env:HOMEPATH))) {
@@ -54,14 +54,14 @@ function Get-PhanesHomeDirectory {
   return $null
 }
 
-# The house root pattern: walk up for .phanes/config.json, $null when there is none. Asking
+# The house root pattern: walk up for .phaneslight/config.json, $null when there is none. Asking
 # the filesystem whether a path exists is a filesystem operation, so OrdinalIgnoreCase governs
 # here; no NAME is compared anywhere in this function.
-function Find-PhanesRoot {
-  $d = Get-PhanesStartDirectory
+function Find-PhanesLightRoot {
+  $d = Get-PhanesLightStartDirectory
   while ($null -ne $d) {
     try {
-      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phanes\config.json')) { return $d.FullName }
+      if (Test-Path -LiteralPath (Join-Path $d.FullName '.phaneslight\config.json')) { return $d.FullName }
     } catch { }
     $d = $d.Parent
   }
@@ -82,7 +82,7 @@ function New-OrdinalHashtable {
 # documented NTFS exception: this is a path check against the filesystem, not a name compare.
 # The trailing separator forced onto the root is load-bearing and not cosmetic: without it
 # "C:\proj-evil" passes a prefix test against "C:\proj". The root itself counts as contained.
-function Test-PhanesContained([string]$Root, [string]$Target) {
+function Test-PhanesLightContained([string]$Root, [string]$Target) {
   if ([string]::IsNullOrWhiteSpace($Root) -or [string]::IsNullOrWhiteSpace($Target)) { return $false }
   $r = $null; $t = $null
   try {
@@ -114,7 +114,7 @@ function Test-PhanesContained([string]$Root, [string]$Target) {
 #
 # The result hashtable is a bare @{} on purpose: its keys are three fixed literals, never user
 # content, so the Ordinal rule does not apply to it.
-function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
+function Read-PhanesLightJsonFile([string]$Path, [string]$RequireMember) {
   $res = @{ Status = 'absent'; Value = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -163,7 +163,7 @@ function Read-PhanesJsonFile([string]$Path, [string]$RequireMember) {
 # answer and acting on it archives or overwrites a run whose state was never seen. The
 # directory probe is not hypothetical: a directory sitting where the ledger belongs read as
 # ABSENT in the draft.
-function Read-PhanesTextFile([string]$Path) {
+function Read-PhanesLightTextFile([string]$Path) {
   $res = @{ Status = 'absent'; Text = $null; Reason = $null }
   try {
     if (-not (Test-Path -LiteralPath $Path)) { return $res }
@@ -262,20 +262,20 @@ function ConvertTo-NodeJson($value, [int]$indent) {
 }
 # END SHARED json
 
-$root = Find-PhanesRoot
-if (-not $root) { [Console]::Error.WriteLine('manifest-write: .phanes/config.json not found from this directory'); exit 1 }
+$root = Find-PhanesLightRoot
+if (-not $root) { [Console]::Error.WriteLine('manifest-write: .phaneslight/config.json not found from this directory'); exit 1 }
 
-# Config: phanesVersion and projectSlug feed the manifest header. A malformed config is a
+# Config: phanesLightVersion and projectSlug feed the manifest header. A malformed config is a
 # refusal (exit 1): this script writes the provenance record other tooling trusts, and
 # writing it while the project's own config is unreadable would bless an unknown state.
 # MW-5 repair: the draft's try/catch never fired on a 0-byte, whitespace-only, literal-null,
-# bare-array or bare-string config, so a manifest was written with null phanesVersion and null
+# bare-array or bare-string config, so a manifest was written with null phanesLightVersion and null
 # projectSlug at exit 0, blessing a state the script could not read. RequireMember is not used
 # here because a config legitimately may not carry either key; requiring a parsed OBJECT is the
 # gate, and that alone rejects all five shapes.
-$cfgRead = Read-PhanesJsonFile (Join-Path $root '.phanes\config.json')
+$cfgRead = Read-PhanesLightJsonFile (Join-Path $root '.phaneslight\config.json')
 if ($cfgRead.Status -cne 'ok') {
-  [Console]::Error.WriteLine("manifest-write: .phanes/config.json is $($cfgRead.Status) ($($cfgRead.Reason)); nothing written, repair the config first")
+  [Console]::Error.WriteLine("manifest-write: .phaneslight/config.json is $($cfgRead.Status) ($($cfgRead.Reason)); nothing written, repair the config first")
   exit 1
 }
 $cfg = $cfgRead.Value
@@ -292,25 +292,33 @@ $cfg = $cfgRead.Value
 #      silently iterated nothing.
 # Either way the manifest was rewritten from scratch at exit 0 and the preserved classes were
 # gone. Requiring a parsed OBJECT carrying an ARTIFACTS ARRAY closes all five with one guard.
-$manifestPath = Join-Path $root '.phanes\manifest.json'
+$manifestPath = Join-Path $root '.phaneslight\manifest.json'
 $existing = $null
-$mfRead = Read-PhanesJsonFile $manifestPath 'artifacts'
+$mfRead = Read-PhanesLightJsonFile $manifestPath 'artifacts'
 if ($mfRead.Status -ceq 'ok') { $existing = $mfRead.Value }
 elseif ($mfRead.Status -cne 'absent') {
-  [Console]::Error.WriteLine("manifest-write: existing .phanes/manifest.json is $($mfRead.Status) ($($mfRead.Reason)); nothing written. Repair or deliberately delete it, then re-run")
+  [Console]::Error.WriteLine("manifest-write: existing .phaneslight/manifest.json is $($mfRead.Status) ($($mfRead.Reason)); nothing written. Repair or deliberately delete it, then re-run")
   exit 1
 }
 if ($null -ne $existing -and -not ($existing.artifacts -is [System.Collections.IEnumerable]) ) {
-  [Console]::Error.WriteLine('manifest-write: existing .phanes/manifest.json has a non-array artifacts member; nothing written')
+  [Console]::Error.WriteLine('manifest-write: existing .phaneslight/manifest.json has a non-array artifacts member; nothing written')
   exit 1
 }
 
-# phanesVersion: config first, then templates.version, then the existing manifest, then null
-# (a Phase 2.5 install runs before Phase 5 stamps phanesVersion; null is honest there).
-$phanesVersion = $null
-if ($cfg.phanesVersion -is [string]) { $phanesVersion = $cfg.phanesVersion }
-elseif ($cfg.templates -and ($cfg.templates.version -is [string])) { $phanesVersion = $cfg.templates.version }
-elseif ($existing -and ($existing.phanesVersion -is [string])) { $phanesVersion = $existing.phanesVersion }
+# phanesLightVersion: config first, then templates.version, then the existing manifest, then null
+# (a Phase 2.5 install runs before Phase 5 stamps phanesLightVersion; null is honest there).
+$phanesLightVersion = $null
+if ($cfg.phanesLightVersion -is [string]) { $phanesLightVersion = $cfg.phanesLightVersion }
+elseif ($cfg.templates -and ($cfg.templates.version -is [string])) { $phanesLightVersion = $cfg.templates.version }
+elseif ($existing -and ($existing.phanesLightVersion -is [string])) { $phanesLightVersion = $existing.phanesLightVersion }
+# LEGACY-NAME-BLOCK BEGIN
+# F-097. The third reader of the config key. A project whose config or manifest predates the
+# v3.6.0 rename carries phanesVersion, which the Task 20 sweep turned into phanesLightVersion
+# here but not on their disk. Without these two the read yields $null and line 440 writes a
+# null version into the rewritten manifest. Tried last, so no non-legacy project changes.
+elseif ($cfg.phanesVersion -is [string]) { $phanesLightVersion = $cfg.phanesVersion }
+elseif ($existing -and ($existing.phanesVersion -is [string])) { $phanesLightVersion = $existing.phanesVersion }
+# LEGACY-NAME-BLOCK END
 $projectSlug = $null
 if ($cfg.projectSlug -is [string]) { $projectSlug = $cfg.projectSlug }
 elseif ($existing -and ($existing.projectSlug -is [string])) { $projectSlug = $existing.projectSlug }
@@ -344,7 +352,7 @@ if ($existing -and $existing.artifacts) {
     # `.PHANES/scripts/x.ps1` fell out of the recomputed scope, was filed as a preserved entry,
     # and then the same file was recomputed and added again: a permanent duplicate, with the
     # recorded `customized: true` dropped from the live copy.
-    if ($np.StartsWith('.phanes/scripts/', [System.StringComparison]::OrdinalIgnoreCase) -or $np.StartsWith('.claude/template/', [System.StringComparison]::OrdinalIgnoreCase)) {
+    if ($np.StartsWith('.phaneslight/scripts/', [System.StringComparison]::OrdinalIgnoreCase) -or $np.StartsWith('.claude/template/', [System.StringComparison]::OrdinalIgnoreCase)) {
       if ($recordedByPath.ContainsKey($np)) { [void]$pathCollisions.Add($np) }
       $recordedByPath[$np] = $a
     } else {
@@ -353,12 +361,12 @@ if ($existing -and $existing.artifacts) {
   }
 }
 
-# Recompute: every file under .phanes/scripts/ and .claude/template/.
+# Recompute: every file under .phaneslight/scripts/ and .claude/template/.
 $artifacts = New-Object System.Collections.ArrayList
 $removed = New-Object System.Collections.ArrayList
 $seen = @{}
 $scanRoots = @(
-  @{ dir = (Join-Path $root '.phanes\scripts'); prefix = '.phanes/scripts/'; class = 'script' },
+  @{ dir = (Join-Path $root '.phaneslight\scripts'); prefix = '.phaneslight/scripts/'; class = 'script' },
   @{ dir = (Join-Path $root '.claude\template'); prefix = '.claude/template/'; class = 'template' }
 )
 $counts = @{ script = 0; hook = 0; template = 0 }
@@ -437,7 +445,7 @@ foreach ($a in $preserved) { [void]$artifacts.Add($a) }
 
 $manifest = [ordered]@{
   manifestVersion = 1
-  phanesVersion = $phanesVersion
+  phanesLightVersion = $phanesLightVersion
   # MW-4 repair: .ToString(<format>) is the CULTURE-SENSITIVE method form (unlike the [string]
   # cast, which PowerShell performs with the invariant culture). Under fi-FI and sv-SE the time
   # separator is a period, so this emitted `2026-08-05T11.32.34+02:00`: parseable JSON, but not
