@@ -17,13 +17,15 @@
 >
 > **The manual install path is retired at v3.6.2.** If you installed by fetching `phaneslight.md` into `.claude/commands/`, install the plugin and then run `/phaneslight:upgrade`, which archives the old command files so you are not left with two live entry points at different versions.
 >
-> **The repository has moved to [`github.com/Aloim/phaneslight`](https://github.com/Aloim/phaneslight).** This is the new home. PhanesLight is a byproduct of a larger project, **Phanes**, a highly sophisticated agentic orchestration setup that is coming to the `Aloim/phanes` repository and inherits the Phanes name; that repository is frozen and no longer receives PhanesLight releases. See [Where PhanesLight came from](#where-phaneslight-came-from).
+> **The repository has moved to [`github.com/Aloim/phaneslight`](https://github.com/Aloim/phaneslight).** This is the new home. PhanesLight is a byproduct of a larger project, **Phanes**, a highly sophisticated agentic orchestration setup that is coming to the `Aloim/phanes` repository and inherits the Phanes name; that repository is frozen and no longer receives PhanesLight releases.
 >
 > **Prefer the pre-ladder workflow?** v3.6.0 replaced the review chain with an escalation ladder. The last release that works the other way is v3.4.1, available from the repository's tags.
 
 ---
 
 **PhanesLight** is a bootstrap prompt for [Claude Code](https://claude.com/claude-code). One command turns an empty or chaotic repository into a fully wired, opinionated, multi-agent development environment.
+
+**It is a byproduct of a larger project called Phanes**, a highly sophisticated agentic orchestration setup, coming soon to [`github.com/Aloim/phanes`](https://github.com/Aloim/phanes). PhanesLight is the part of that work which turned out to be useful on its own: the bootstrap, the project memory and the discipline that keeps a team of agents honest, extracted into something one command installs into any repository. That provenance is why it is deliberately small. The two are separate products with separate install paths, and nothing you install here is affected when Phanes lands.
 
 It is not install-once-and-forget. It is a living specification you re-run: each `/phaneslight:run` surveys the project again, upgrades the sub-agents, fills in missing infrastructure, and bumps a run counter. The result is an agentic team that grows with your codebase instead of rotting beside it.
 
@@ -38,7 +40,7 @@ It is not install-once-and-forget. It is a living specification you re-run: each
 | Fresh project, or one with no PhanesLight yet | `/phaneslight:run`. Re-running it also keeps a current install up to date. |
 | A project carrying an older PhanesLight or Phanes (any version) | `/phaneslight:upgrade`. Retires any manual install it finds, then upgrades the whole structure on a dedicated branch behind an evidence-verified checklist. Accumulated knowledge is preserved, never rewritten. |
 
-**Contents** · [What it does](#what-it-does) · [Which model for which run](#which-model-for-which-run) · [How to use](#how-to-use) · [Core principles](#core-principles-enforced-by-phaneslight) · [From zero](#for-inexperienced-users-step-by-step-from-zero) · [How to install](#how-to-install) · [Upgrading](#upgrading-an-older-install) · [Where it came from](#where-phaneslight-came-from) · [Companion tools](#companion-tools) · [Third-party enhancements](#recommended-third-party-enhancements) · [Version](#version) · [License](#license) · [Contributing](#contributing)
+**Contents** · [What it does](#what-it-does) · [Which model for which run](#which-model-for-which-run) · [How to use](#how-to-use) · [Core principles](#core-principles-enforced-by-phaneslight) · [From zero](#for-inexperienced-users-step-by-step-from-zero) · [How to install](#how-to-install) · [Upgrading](#upgrading-an-older-install) · [Companion tools](#companion-tools) · [Third-party enhancements](#recommended-third-party-enhancements) · [Version](#version) · [License](#license) · [Contributing](#contributing)
 
 ---
 
@@ -351,16 +353,6 @@ Run it when any of these is true:
 
 It migrates the project behind a generated, evidence-verified checklist, preserving accumulated knowledge, then hands back to `/phaneslight:run`. **Restart your session afterwards.**
 
-
-## Where PhanesLight came from
-
-**PhanesLight is a byproduct of a larger project called Phanes**, a highly sophisticated agentic orchestration setup. PhanesLight is the part of that work which turned out to be useful on its own: the bootstrap, the project memory and the discipline that keeps a team of agents honest, extracted into something one command can install into any repository.
-
-That is why it is deliberately small. It stays a single prompt plus a tested script library, with everything beyond bootstrapping pushed out into [companion tools](#companion-tools). Phanes is the opposite: the full orchestration system, not a bootstrap for one.
-
-**Phanes is coming to [`github.com/Aloim/phanes`](https://github.com/Aloim/phanes).** That repository currently holds the frozen pre-rename PhanesLight releases and will become Phanes' home; PhanesLight lives at [`Aloim/phaneslight`](https://github.com/Aloim/phaneslight) and is not going anywhere. The two are separate products with separate install paths, and nothing you install today is affected when Phanes lands.
-
----
 
 ## Companion tools
 
