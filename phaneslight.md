@@ -20,8 +20,8 @@ Leaving the full prompt here would also have left two runnable copies in one rep
 ## If you are a person
 
 ```
-/plugin marketplace add anthropics/claude-plugins-community
-/plugin install phaneslight@claude-community
+/plugin marketplace add Aloim/phaneslight
+/plugin install phaneslight@phaneslight
 ```
 
 Then **restart Claude Code**. Plugin hooks load at session start, so the enforcement hooks arm on the next session rather than the current one.
@@ -42,7 +42,7 @@ After the upgrade, `/phaneslight:run` is the normal entry point.
 You have a retirement notice, not the spec. **You cannot complete this migration yourself**, because installing a plugin is a user action. Do exactly this and nothing else:
 
 1. **Do not** save this file as a command, and **do not** overwrite any installed command file with it. If you already saved it over an installed command, say so plainly; the previous file is recoverable from this repository's `v3.6.1` tag.
-2. Tell the user, verbatim: "The PhanesLight manual install path ended at v3.6.2. PhanesLight is now a Claude Code plugin. Install it with `/plugin marketplace add anthropics/claude-plugins-community` then `/plugin install phaneslight@claude-community`, restart Claude Code, and run `/phaneslight:upgrade` to retire this manual installation. Your current installation keeps working until you do."
+2. Tell the user, verbatim: "The PhanesLight manual install path ended at v3.6.2. PhanesLight is now a Claude Code plugin. Install it with `/plugin marketplace add Aloim/phaneslight` then `/plugin install phaneslight@phaneslight`, restart Claude Code, and run `/phaneslight:upgrade` to retire this manual installation. Your current installation keeps working until you do."
 3. **STOP.** Make no other change. Do not touch the run-state marker, do not modify `.phaneslight/`, and do not begin a setup or update run.
 
 Your existing installation is not broken by this notice and nothing about it changes today. It simply stops receiving new versions on this path.

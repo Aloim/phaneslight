@@ -6,11 +6,11 @@
 >
 > **The project is PhanesLight, and the names moved with it.** `phanes.md` → `phaneslight.md`, `/phanes` → `/phaneslight:run`, `/phanesupgrade` → `/phaneslight:upgrade`, and project state moved from `.phanes/` to `.phaneslight/`.
 >
-> **PhanesLight now installs as a Claude Code plugin.** Add the community marketplace and install it:
+> **PhanesLight now installs as a Claude Code plugin.** Add its marketplace and install it:
 >
 > ```
-> /plugin marketplace add anthropics/claude-plugins-community
-> /plugin install phaneslight@claude-community
+> /plugin marketplace add Aloim/phaneslight
+> /plugin install phaneslight@phaneslight
 > ```
 >
 > Then restart Claude Code and run `/phaneslight:run`. The entry points are namespaced now: `/phaneslight:run` and `/phaneslight:upgrade`.
@@ -27,7 +27,7 @@
 
 It is not install-once-and-forget. It is a living specification you re-run: each `/phaneslight:run` surveys the project again, upgrades the sub-agents, fills in missing infrastructure, and bumps a run counter. The result is an agentic team that grows with your codebase instead of rotting beside it.
 
-**The prompt is one file.** You install a single Markdown file as your `/phaneslight:run` command. The scripts, hooks, agents and documents it sets up are created inside your repository during the run: language-independent scripts and prompt templates are fetched as tested templates pinned to the prompt's own version, everything else is generated. If the fetch fails, the run generates those too, so an offline install is still complete.
+**The prompt is one file.** It ships inside the plugin as the `/phaneslight:run` skill. The scripts, hooks, agents and documents it sets up are created inside your repository during the run: language-independent scripts and prompt templates are installed from the tested library the plugin ships with, everything else is generated. The install touches no network, so it cannot half-succeed on a bad connection.
 
 **Run `/phaneslight:run` and `/phaneslight:upgrade` on Opus 5 at `high` effort** (`claude --model opus --effort high`). Those runs build and maintain the whole setup, so they are the ones worth spending on. The team they install is designed to run on Sonnet 5 afterwards, which is what keeps a Max 5x plan viable. See [Which model for which run](#which-model-for-which-run).
 
@@ -35,8 +35,8 @@ It is not install-once-and-forget. It is a living specification you re-run: each
 
 | Your situation | What to use |
 | --- | --- |
-| Fresh project, or one with no PhanesLight yet | `phaneslight.md` → `/phaneslight:run`. Re-running it also keeps a current install up to date. |
-| A project carrying an older PhanesLight or Phanes (any version) | `PhanesLightUpgrade.md` → `/phaneslight:upgrade`. Refreshes your command, then upgrades the whole structure on a dedicated branch behind an evidence-verified checklist. Accumulated knowledge is preserved, never rewritten. |
+| Fresh project, or one with no PhanesLight yet | `/phaneslight:run`. Re-running it also keeps a current install up to date. |
+| A project carrying an older PhanesLight or Phanes (any version) | `/phaneslight:upgrade`. Retires any manual install it finds, then upgrades the whole structure on a dedicated branch behind an evidence-verified checklist. Accumulated knowledge is preserved, never rewritten. |
 
 **Contents** · [What it does](#what-it-does) · [Which model for which run](#which-model-for-which-run) · [How to use](#how-to-use) · [Core principles](#core-principles-enforced-by-phaneslight) · [From zero](#for-inexperienced-users-step-by-step-from-zero) · [How to install](#how-to-install) · [Upgrading](#upgrading-an-older-install) · [Companion tools](#companion-tools) · [Third-party enhancements](#recommended-third-party-enhancements) · [Version](#version) · [License](#license) · [Contributing](#contributing)
 
@@ -44,7 +44,7 @@ It is not install-once-and-forget. It is a living specification you re-run: each
 
 ## What it does
 
-**1. Pre-flight.** The run checks itself first: it fetches the published `phaneslight.md` and compares version stamps, offering the upgrade if a newer one has shipped. It then installs the four MCP servers it benefits from, and only four, because every tool schema costs context in every session and each server has to remove more context than its schema costs:
+**1. Pre-flight.** The run checks itself first, comparing its own version stamp against the version recorded in your project and stopping to ask if the two disagree in a direction it should not resolve alone. There is no network probe; the plugin manager owns updates. It then installs the four MCP servers it benefits from, and only four, because every tool schema costs context in every session and each server has to remove more context than its schema costs:
 
 - **`context7`** for live library documentation, on demand.
 - **`deepwiki`** for digest answers about GitHub dependencies, so agents never pull dependency source into context.
@@ -61,7 +61,7 @@ These are enhancements, not dependencies: a failed install becomes a TODO and th
 - **`tests/`** — `unit/`, `integration/`, `e2e/`, `fixtures/`, `helpers/`, with the same header-stamp discipline `src/` uses.
 - **`.phaneslight/scripts/`** — the library that owns every mechanical rule: stamped file creation, line counts, documentation audit, index regeneration, hot-file character budgets, API baseline regeneration and diffing. Each script finds the project by walking up to `.phaneslight/config.json` and uses only root-relative paths, so a hook can never be wired to the wrong tree. **On Windows, ten more commands** mechanize what a run previously did by hand — `preflight`, `update-preflight`, `install-templates`, `scaffold`, `manifest-write`, `ledger`, `census-diff`, `hook-ledger-status`, `repo-manifest`, `batch-apply` — turning thirty to fifty tool calls into one digest and letting a re-run measure what moved before rebuilding. **Every one observes or writes what it is told to and decides nothing.** On POSIX they are refused by name rather than faked, and the manual flow is unchanged.
 - **`.phaneslight/returns/`** — **(v3.6.1)** durable sub-agent returns, written before the next dispatch. See [Core principles](#core-principles-enforced-by-phaneslight).
-- **`.claude/settings.json`** — hooks that enforce rules at the harness layer: a blocking guard denying any unstamped new file, an advisory check running size and documentation audits on every write. Prompts forget under context pressure. Hooks cannot.
+- **Enforcement hooks** — registered by the plugin, not written into your `.claude/settings.json`, and enforcing rules at the harness layer: a blocking guard denying any unstamped new file, an advisory check running size and documentation audits on every write. Prompts forget under context pressure. Hooks cannot.
 
 **4. Tiered workflows.** Every task is sorted into **T1** (single-file fix), **T2** (feature inside one module) or **T3** (cross-module). Each tier loads different context and engages a different chain, but **disclosure is universal**: even a T1 fix is named in a report, and closure reconciles what landed against what was intended at every close. Only the paper trail scales with tier. A task that outgrows its tier mid-flight stops and asks for promotion.
 
@@ -294,12 +294,21 @@ With Node.js 18+ you can instead run `npm install -g @anthropic-ai/claude-code`.
 
 ### Install the plugin
 
-PhanesLight is distributed as a Claude Code plugin through the community marketplace.
+PhanesLight is distributed as a Claude Code plugin.
+
+```
+/plugin marketplace add Aloim/phaneslight
+/plugin install phaneslight@phaneslight
+```
+
+It is also listed on the community marketplace. That catalog syncs on its own schedule, so if the listing has propagated, this works too and installs exactly the same plugin:
 
 ```
 /plugin marketplace add anthropics/claude-plugins-community
 /plugin install phaneslight@claude-community
 ```
+
+Use the first pair if the second reports that the plugin cannot be found.
 
 Then **restart Claude Code**. Plugin hooks are loaded at session start, so the enforcement hooks arm on the next session rather than the current one.
 
@@ -366,7 +375,7 @@ PhanesLight never installs these. The census discovers them only if you installe
 
 ## Version
 
-**Current: v3.7.0** (2026-09-03), the plugin release. PhanesLight installs from the community marketplace, the entry points are `/phaneslight:run` and `/phaneslight:upgrade`, the enforcement hooks are registered by the plugin rather than written into your project's settings, version checking is local instead of a network fetch, and the four MCP servers are offered once rather than assumed. The manual install path is retired at v3.6.2. See the [Changelog](Changelog.md).
+**Current: v3.7.0** (2026-09-03), the plugin release. PhanesLight installs as a Claude Code plugin, the entry points are `/phaneslight:run` and `/phaneslight:upgrade`, the enforcement hooks are registered by the plugin rather than written into your project's settings, version checking is local instead of a network fetch, and the four MCP servers are offered once rather than assumed. The manual install path is retired at v3.6.2. See the [Changelog](Changelog.md).
 
 **Tooling:** `new-file` selects its header by *destination* rather than by a magic module name, so a Markdown file under `documentation/` gets the DOC discipline header whatever module was named, and says so rather than promoting silently. `doc-index` orders by filename instead of modification time, so the index can answer "which is the latest" and editing an old document stops reordering the whole file. `register-check` renames its completed-entry finding to `COMPLETED-NOT-ARCHIVED` and explains itself, resolving a contradiction where the register legend advertised a marker whose use the checker reported as a finding. `loc-check` always terminates with a count line, so a truncated tail carries the number. Closure's write surface is documented exhaustively, since "output is a flag, never a fix" is a claim about judgment, not about the file system.
 

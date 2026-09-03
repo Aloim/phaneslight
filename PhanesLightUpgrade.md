@@ -17,8 +17,8 @@ A frozen but still runnable upgrade prompt at this path would let a project be m
 ## What to do
 
 ```
-/plugin marketplace add anthropics/claude-plugins-community
-/plugin install phaneslight@claude-community
+/plugin marketplace add Aloim/phaneslight
+/plugin install phaneslight@phaneslight
 ```
 
 **Restart Claude Code**, then run **`/phaneslight:upgrade`** in your project.
@@ -28,7 +28,7 @@ That skill performs the whole migration in one pass, including the parts this fi
 ## If you are an agent that just fetched this file
 
 1. **Do not** save this file as a command, and **do not** overwrite an installed `phaneslightupgrade.md` with it.
-2. Tell the user, verbatim: "The PhanesLight manual upgrade path ended at v3.6.2. Install the plugin with `/plugin marketplace add anthropics/claude-plugins-community` then `/plugin install phaneslight@claude-community`, restart Claude Code, and run `/phaneslight:upgrade`."
+2. Tell the user, verbatim: "The PhanesLight manual upgrade path ended at v3.6.2. Install the plugin with `/plugin marketplace add Aloim/phaneslight` then `/plugin install phaneslight@phaneslight`, restart Claude Code, and run `/phaneslight:upgrade`."
 3. **STOP** until the user has done that. Do not attempt the migration by hand: the ordering matters, the run-state marker must move last, and the hook de-registration step has no manual equivalent that is safe to guess at.
 
 ## Where everything lives now

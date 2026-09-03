@@ -13,8 +13,8 @@ All notable changes to **PhanesLight**. The authoritative version marker is the 
 ### 1. Installed as a plugin, and renamed entry points
 
 ```
-/plugin marketplace add anthropics/claude-plugins-community
-/plugin install phaneslight@claude-community
+/plugin marketplace add Aloim/phaneslight
+/plugin install phaneslight@phaneslight
 ```
 
 Plugin skills are namespaced, so the entry points are now **`/phaneslight:run`** and **`/phaneslight:upgrade`**. The bare `/phaneslight` and `/phaneslightupgrade` no longer exist.
