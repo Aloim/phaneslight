@@ -1,0 +1,12 @@
+{
+  "name": "phaneslight",
+  "owner": { "name": "Blueprompt" },
+  "description": "The PhanesLight marketplace: multi-agent orchestration and durable project memory for Claude Code.",
+  "plugins": [
+    {
+      "name": "phaneslight",
+      "source": "./plugin",
+      "description": "Multi-agent orchestration and project-memory system for Claude Code."
+    }
+  ]
+}
