@@ -1,6 +1,6 @@
 {
   "name": "phaneslight",
-  "owner": { "name": "Blueprompt" },
+  "owner": { "name": "Aloim", "url": "https://github.com/Aloim" },
   "description": "The PhanesLight marketplace: multi-agent orchestration and durable project memory for Claude Code.",
   "plugins": [
     {
