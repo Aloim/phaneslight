@@ -1,7 +1,8 @@
-# phaneslight-template v3.7.0 preflight
+# phaneslight-template v3.7.1 preflight
 # Phase 0 mechanical pre-flights, observed and reported, NEVER acted on: run-type marker,
-# installed version, the four standard MCP servers via `claude mcp list`, platform,
-# capability-census counts, and the legacy-migration signals. Emits ONE digest JSON. Consent, AskUserQuestion, MCP installs, the
+# installed version, upstream stamp (network-tolerant, 10s timeout, single attempt), the four
+# standard MCP servers via `claude mcp list`, platform, capability-census counts, and the
+# legacy-migration signals. Emits ONE digest JSON. Consent, AskUserQuestion, MCP installs, the
 # STOP-and-route-to-phaneslightupgrade judgment, and every other decision stay in the session: this
 # script observes and never mutates anything. Advisory: always exits 0.
 $ErrorActionPreference = 'Stop'
@@ -427,13 +428,24 @@ if (-not $markerReadable) { $runType = 'unknown' }
 elseif ($null -ne $marker) { $runType = 'update' }
 elseif ((Test-Path -LiteralPath (Join-Path $root '.phaneslight\config.json')) -or (Test-Path -LiteralPath (Join-Path (Join-Path $root $docRoot) 'session-summaries'))) { $runType = 'anomaly' }
 
-# --- (v3.7.0) The upstream stamp probe is REMOVED, and `upstream` is gone from the digest.
-# --- Version reconciliation is local now: Step 0 compares the running prompt's own stamp
-# --- against the project's recorded phanesLightVersion, and the plugin manager owns updates.
-# --- Keeping the probe would be worse than useless after the v3.6.2 terminal release, because
-# --- the path it polled (main/phaneslight.md) now holds the retirement notice, so it would
-# --- report 3.6.2 as "upstream" to a project running 3.7.0 and invite a downgrade. This
-# --- script neither knows nor guesses what is published.
+# --- upstream stamp (network-tolerant: single attempt, 10 second timeout, sanity-checked;
+# --- every failure shape degrades to null, never to a stop)
+$upstream = $null
+$tmp = Join-Path $env:TEMP ("phaneslight-upstream-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+try {
+  try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Aloim/phaneslight/main/phaneslight.md' -OutFile $tmp -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+  $line1 = Get-Content -LiteralPath $tmp -TotalCount 1 -Encoding utf8
+  if ($line1 -is [string] -and $line1.StartsWith('<!-- PhanesLight v', [System.StringComparison]::Ordinal)) {
+    $m = [regex]::Match($line1, 'PhanesLight v(\d+\.\d+(?:\.\d+)?)')
+    if ($m.Success) { $upstream = $m.Groups[1].Value }
+  }
+} catch {
+  $upstream = $null
+  [Console]::Error.WriteLine('preflight: upstream stamp fetch failed (offline, rate-limited, or unreachable); upstream reported as null')
+} finally {
+  if (Test-Path -LiteralPath $tmp) { try { Remove-Item -LiteralPath $tmp -Force } catch { } }
+}
 
 # --- the four standard MCP servers via `claude mcp list` (native call in try/catch under
 # --- EAP-Stop; a failed listing degrades all four to null, never to false: an empty result
@@ -582,6 +594,7 @@ $digest = [ordered]@{
   configReadable = $configReadable
   rootSource = $rootInfo.Source
   installedVersion = $installedVersion
+  upstream = $upstream
   mcp = $mcp
   platform = 'windows'
   censusCounts = $censusCounts

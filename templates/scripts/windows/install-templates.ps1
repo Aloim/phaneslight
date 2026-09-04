@@ -1,11 +1,10 @@
-# phaneslight-template v3.7.0 install-templates
+# phaneslight-template v3.7.1 install-templates
 # Mechanizes CHECKLIST items 1-4, 6-9, and 11 for the Windows platform: fetches the manifest's
 # windows script set plus the every-platform files (cli.js, prompt templates) into a staging
 # directory, sanity-checks every stamp THERE, and only then installs (scripts flat into
 # .phaneslight/scripts/, prompts to their installPath), merges the settings fragment preserving
-# existing hooks ONLY when the manifest still declares one (v3.7.0: the plugin registers the
-# enforcement hooks itself, so it does not, and the merge is skipped), verifies the merge,
-# smoke-runs the cli chain, writes the config templates block, and records provenance by invoking the just-installed manifest-write. Stage-then-
+# existing hooks, verifies the merge, smoke-runs the cli chain, writes the config templates
+# block, and records provenance by invoking the just-installed manifest-write. Stage-then-
 # commit: every fetch or stamp failure aborts BEFORE anything touches the project. Preserve
 # rules: a manifest entry with customized:true, and any prompt template whose on-disk sha no
 # longer matches its manifest record, are never overwritten. NOT advisory: exit 0 success,
@@ -299,15 +298,6 @@ try {
   if ($m.Success) { $ownVersion = $m.Groups[1].Value }
 } catch { }
 if ($null -eq $ownVersion) { Fail 'cannot read own version stamp' }
-# (v3.7.0) Source resolution, in order. The plugin ships the template library with it, so the
-# normal path is a local directory and the install touches no network at all. The caller
-# (Phase 2.5) passes -Source "${CLAUDE_PLUGIN_ROOT}/templates". If it did not, fall back to
-# the env var the plugin runtime sets, and only then to the tag-pinned URL, which remains
-# correct for a library installed by hand from a released tag.
-if ($null -eq $source -and $env:CLAUDE_PLUGIN_ROOT) {
-  $candidate = Join-Path $env:CLAUDE_PLUGIN_ROOT 'templates'
-  if (Test-Path -LiteralPath $candidate -PathType Container) { $source = $candidate }
-}
 if ($null -eq $source) { $source = "https://raw.githubusercontent.com/Aloim/phaneslight/v$ownVersion/templates" }
 $sourceIsDir = Test-Path -LiteralPath $source -PathType Container
 
@@ -388,14 +378,10 @@ foreach ($p in @($man.promptTemplates)) {
 }
 $fragRel = $null
 if ($man.settingsFragments -and ($man.settingsFragments.windows -is [string])) { $fragRel = [string]$man.settingsFragments.windows }
-# (v3.7.0) An absent fragment is the NORMAL case, not a failure. The plugin registers the
-# enforcement hooks itself, so v3.7.0's manifest declares no settings fragment and every
-# fragment-dependent block below is guarded on $fragRel. A manifest that still declares one
-# (a pre-v3.7.0 library installed by hand) keeps the old merge path, which is why the blocks
-# are guarded rather than deleted.
+if ($null -eq $fragRel) { Fail 'manifest carries no windows settings fragment' }
 
 foreach ($e in $plan) { if (-not (Fetch-One $e.rel)) { Fail "cannot fetch $($e.rel) from $source; nothing installed" } }
-if ($fragRel -and -not (Fetch-One $fragRel)) { Fail "cannot fetch $fragRel from $source; nothing installed" }
+if (-not (Fetch-One $fragRel)) { Fail "cannot fetch $fragRel from $source; nothing installed" }
 
 # item 2: stamp sanity per staged file, BEFORE any install. The fragment is pure JSON (it
 # cannot carry a comment stamp); its sanity check is a parse plus a hooks key.
@@ -409,12 +395,10 @@ foreach ($e in $plan) {
   if (-not $ok) { Fail "stamp check failed for $($e.rel) (expected '$want' within the first two lines); nothing installed" }
 }
 $frag = $null
-if ($fragRel) {
-  try {
-    $frag = Get-Content -LiteralPath (Join-Path $staging ($fragRel -replace '/', '\')) -Raw -Encoding utf8 | ConvertFrom-Json
-    if (-not $frag.hooks) { throw 'no hooks key' }
-  } catch { Fail "fetched settings fragment $fragRel is not a hooks JSON; nothing installed" }
-}
+try {
+  $frag = Get-Content -LiteralPath (Join-Path $staging ($fragRel -replace '/', '\')) -Raw -Encoding utf8 | ConvertFrom-Json
+  if (-not $frag.hooks) { throw 'no hooks key' }
+} catch { Fail "fetched settings fragment $fragRel is not a hooks JSON; nothing installed" }
 
 # --- install (item 4: flat into .phaneslight/scripts/, extension kept; prompts to installPath).
 # C2 repair, and the severity comes from where the string originates. `installPath` is taken
@@ -491,7 +475,6 @@ foreach ($e in $plan) {
 }
 Write-Output ("installed: $($installed.Count) files, preserved: $($preserved.Count)")
 
-if ($fragRel) {
 # --- item 8: merge the settings fragment into .claude/settings.json, preserving existing
 # --- hooks; a malformed existing settings file is a refusal, never a clobber.
 $settingsPath = Join-Path $root '.claude\settings.json'
@@ -575,7 +558,6 @@ if ($repairedHooks.Count -gt 0) {
   foreach ($rc in $repairedHooks) { Write-Output ("  was: $rc") }
 }
 Write-Output 'settings: read-back verification passed (relative .phaneslight/scripts/ commands only)'
-}
 
 # --- item 7: smoke run through the cross-shell entry. Native stderr is NOT redirected here:
 # --- under EAP-Stop a redirected native stderr line becomes a terminating ErrorRecord (the

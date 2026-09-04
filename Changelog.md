@@ -1,77 +1,54 @@
 # Changelog
 
-All notable changes to **PhanesLight**. The authoritative version marker is the stamp on the first BODY line of `skills/run/SKILL.md`, immediately after the frontmatter (before v3.7.0 it was line 1 of `phaneslight.md`. Diff it against this repository before assuming your installed copy is current.
+All notable changes to **PhanesLight**. The authoritative version marker is the stamp on the first line of `phaneslight.md`. Diff it against this repository before assuming your installed copy is current.
 
-> From v3.1 onward every entry closes with an **Installed project impact** block (Affected / Breaking / Verify). `/phaneslight:upgrade` reads these blocks to build its upgrade brief; entries older than v3.1 are covered by the manifest diff instead.
+> From v3.1 onward every entry closes with an **Installed project impact** block (Affected / Breaking / Verify). `/phaneslightupgrade` reads these blocks to build its upgrade brief; entries older than v3.1 are covered by the manifest diff instead.
 
 ---
 
-## v3.7.0 (2026-09-03)
+## v3.7.1 (2026-09-04)
 
-**PhanesLight becomes a Claude Code plugin.** Installation, updates and hook registration all move to the plugin system. The manual install path is retired.
+**Two changes to who may write what, and one repository split. The haiku tier stops writing code entirely, the reviewer picks up planning as its first duty and is allowed to write plan files, and the Claude Code plugin moves out to its own repository so that `Aloim/phaneslight` can be the manual line's home.**
 
-### 1. Installed as a plugin, and renamed entry points
+> **There is no manual v3.7.0.** v3.7.0 was the plugin release and it shipped only as a plugin, retiring the manual path. That retirement is reversed here: the manual prompt is maintained again, at `Aloim/phaneslight`, and the plugin continues separately at `Aloim/phanesplugin`. An install that never left the manual path upgrades v3.6.1 straight to v3.7.1 and skips nothing that applies to it.
+
+### 1. The haiku tier never writes code
+
+`<projectSlug>-mechanic` may no longer write code of any kind. Its dispatched scope is now mechanical **non-code** work only: formatting, documentation indexing, archive condensation, and the retrieval-and-digest duty it already carried. A task that turns out to need authored code comes back to its spawner unwritten, with a description of what the task needs.
+
+**Its escalation threshold drops from MED to LOW, and that follows directly from the write restriction rather than from any reassessment of severity.** A mechanic that could write was able to fix a LOW in passing and move on. One that cannot write has nowhere to put a LOW except upward, and a LOW it keeps to itself is a LOW nobody else will ever see. What travels is a report, not a work item: the spawner applies the ordinary ladder to what arrives, and a LOW from a mechanic still creates no work unless the spawner independently regrades it. INFO never travels, from any agent.
+
+The worker is untouched. It still writes code within its dispatched scope and still escalates at MED.
+
+**Why.** The haiku tier is the cheapest in the lineup and it is dispatched for the work where its cheapness pays: fetching, digesting, formatting, indexing. Code was always outside what it was pinned for, and the model rubric had said so since v3.6.0 (`Never for authored logic`), but the write-rights table still granted it edits within a dispatched scope, so the restriction depended on every dispatcher choosing correctly rather than on the lineup refusing. This closes that gap in the table rather than in the guidance.
+
+### 2. The reviewer plans first, and writes plan files
+
+**A new duty at launch.** When the primary session launches `<projectSlug>-orchestrator` with a plan, the orchestrator's first act, before the first execution step and before any worker or mechanic dispatch, is to spawn `<projectSlug>-reviewer` against that plan. The reviewer returns a plan review naming what the repository contradicts, what is sequenced wrong, what acceptance checks are missing, and what work the plan implies without stating. On CRIT or HIGH the orchestrator stops and takes the finding to the user. A run that was handed no plan skips this entirely.
+
+**The reviewer may write the plan file.** It amends the plan in place or authors a corrected one under `documentation/plans/`, and names every file it wrote in its return. This is the only writing it does and it is documentation: it never touches code, and the orchestrator still applies every code change itself. A reviewer that rewrites a plan silently is as much a defect as a worker with an undisclosed edit.
+
+**The old wording was misleading and is corrected.** Up to v3.6.1 the spec said flatly that the reviewer "never writes", while simultaneously requiring it to author fix plans, and the Phase 4 generation checklist called any reviewer write grant a generation defect. The two could not both be honoured. The rule is now stated as what it always meant: the reviewer never writes **code**. A reviewer generated as wholly read-only now fails the generation check just as a reviewer granted code writes does, because it cannot perform the duty the lineup assigns it.
+
+**This costs more, deliberately.** The fable tier now fires once per planned launch where it previously fired only on HIGH and CRIT. The trade is that a defect caught in the plan costs one review, while the same defect caught at close costs every step built on top of it.
+
+### 3. The plugin and the manual prompt are separate products now
+
+`Aloim/phaneslight` holds the manual prompt. The Claude Code plugin, its marketplace and its skills have moved to **`Aloim/phanesplugin`**, and plugin users re-add the marketplace there:
 
 ```
-/plugin marketplace add Aloim/phaneslight
+/plugin marketplace add Aloim/phanesplugin
 /plugin install phaneslight@phaneslight
 ```
 
-Plugin skills are namespaced, so the entry points are now **`/phaneslight:run`** and **`/phaneslight:upgrade`**. The bare `/phaneslight` and `/phaneslightupgrade` no longer exist.
+The plugin keeps the name `phaneslight`, so `/phaneslight:run` and `/phaneslight:upgrade` are unchanged and no command has to be relearned. Only the marketplace source moved.
 
-### 2. The manual install path is retired
+**v3.7.1 is published to both `Aloim/phaneslight` and the legacy `Aloim/phanes`**, exactly as v3.6.1 was, so an installation still polling the legacy URL sees the release once and is repointed by `/phaneslightupgrade`. The line-1 sanity check is what keeps that safe: a fetch whose first line is not `<!-- PhanesLight v` is a fetch failure and never a release, whatever version number it contains. That check must never be relaxed to accommodate a rename.
 
-Fetching `phaneslight.md` into `.claude/commands/` is no longer supported; the raw files are frozen at v3.6.2. Project commands and plugin skills both stay available and neither overrides the other, so a manual install left in place gives you two live entry points at two different versions. `/phaneslight:upgrade` detects this, reports both with their versions, and **archives** the old command files rather than deleting them.
-
-### 3. Version checking is local, and a new refusal
-
-Phase 0 no longer polls `raw.githubusercontent.com`. It compares this prompt's own stamp against `phanesLightVersion` in `.phaneslight/config.json`. This removes the network from the run and, with it, the CDN staleness that made post-publish verification unreliable.
-
-Two branches are new, because plugin updates can move backwards in a way manual installs never did. A project recorded at a version **newer** than the running prompt, and a version present but unparseable, both **STOP and ASK**. Regenerating a project with an older generator destroys structure that generator cannot identify, and archive-never-delete does not protect artifacts a run never recognized. Migration boundaries are now declared data (`migrationBoundaries` in the template manifest) rather than hard-coded fingerprints.
-
-### 4. Hooks are registered by the plugin
-
-`hook-stamp-guard`, `hook-size-check` and `hook-ledger-status` are registered from the plugin's own `hooks/hooks.json` against `${CLAUDE_PROJECT_DIR}`. Nothing is merged into your project's `.claude/settings.json` any more.
-
-Plugin hooks fire wherever the plugin is enabled, and the refusal that keeps this harmless already existed: each script walks up to find a `.phaneslight/` root and exits 0 when there is none. That refusal is the correctness boundary and **must be preserved in every generated script**.
-
-The v2.6 path-discipline rule is **restated, not dropped**: a script may now load from outside the project, but every path it operates on must still resolve under the root `Find-PhanesLightRoot` discovers. The incident that produced the original rule, hooks anchored at the PhanesLight repository path policing the wrong tree, is carried with it.
-
-### 5. The four MCP servers are offered, not assumed
-
-`context7`, `deepwiki`, `serena` and `semble` are recommended once, on the first run, and the answer is recorded as `mcpConsent` in `.phaneslight/config.json`. A recorded decline is honoured rather than re-asked. They are deliberately **not** declared in the plugin manifest: manifest-declared servers are all-or-nothing per plugin, with no per-project consent and no way to respect a deliberate removal.
-
-### 6. Templates ship with the plugin
-
-The template library is read from `${CLAUDE_PLUGIN_ROOT}/templates/` instead of being fetched from a tag, so the prompt and its templates cannot skew and the install path no longer touches the network.
-
-### Installed project impact
-
-- **Affected:** every project. Entry point names change, and hook registration moves out of `.claude/settings.json`.
-- **Breaking:** `/phaneslight` and `/phaneslightupgrade` stop existing. Manual installs must run `/phaneslight:upgrade` once after installing the plugin, or they will carry duplicate entry points and duplicate hook registrations that fire twice.
-- **Verify:** `.claude/commands/` carries no PhanesLight command file; `.claude/settings.json` carries no hook command containing `.phaneslight/scripts/`, and every non-PhanesLight hook in it is unchanged; `/phaneslight:run` reports the current version.
-
----
-
-## v3.6.2 (2026-09-03), terminal manual release
-
-**This release ships no prompt.** It is the last thing that will ever happen on the manual install path, and it exists to tell manual installations where the product went.
-
-`phaneslight.md` and `PhanesLightUpgrade.md` at the repository root are **replaced in full by retirement notices**. Neither is runnable any more.
-
-**Why replaced rather than frozen.** Manual installations discover new versions by polling `phaneslight.md` for a changed version stamp. A file frozen at v3.6.1 never changes again, so the probe never fires again and those installations would never learn the plugin exists. Bumping the stamp to v3.6.2 fires it one last time. Replacing the body rather than keeping the prompt also removes the drift hazard: after this release the repository holds exactly one runnable copy of the prompt, inside the plugin.
-
-`PhanesLightUpgrade.md` is replaced for a sharper reason. A runnable upgrade prompt left at the old path would let a project be migrated by a generator that is no longer the living one, and regenerating a project with an older generator destroys structure that generator cannot identify.
-
-The `v3.6.1` tag still carries the last manual release whole and runnable.
-
-**Known limitation.** An installation that already has a v3.6.1 `/phaneslightupgrade` command locally will migrate to v3.6.1 structure and then find the notice again on its next check. No file in this repository can install a plugin on a user's behalf, so that last step is necessarily manual.
-
-### Installed project impact
-
-- **Affected:** manual installations only. Plugin installations are unaffected.
-- **Breaking:** nothing breaks today. An existing manual installation keeps working exactly as it did; it simply stops receiving new versions on this path.
-- **Verify:** fetching `phaneslight.md` returns a file whose first line stamps `v3.6.2` and whose body is a retirement notice, not a specification.
+**Installed project impact:**
+- Affected: `.claude/agents/<projectSlug>-mechanic.md` (no code writes, escalate-at-LOW, tool grant narrowed); `.claude/agents/<projectSlug>-reviewer.md` (plan-file and review-artifact writes granted, the launch plan-review duty added); the project root `CLAUDE.md` Pinned Directives block (the lineup summary restates both rules and the plan-review duty); `.claude/template/agent-definition.md` and `.claude/template/report.md` where installed; `.phaneslight/scripts/` and `.claude/template/` (all template stamps move to `phaneslight-template v3.7.1`, fetched pinned to the `v3.7.1` tag); and `.phaneslight/config.json` (`"phanesLightVersion": "3.7.1"`).
+- Breaking: **yes, for dispatch habits, and no, for any script or file format.** No script signature, exit code or manifest schema changed. What changed is what a mechanic dispatch may be asked to do: a workflow, a chained procedure or a habit that dispatches `<projectSlug>-mechanic` to edit source now has to route that work to `<projectSlug>-worker` instead. Expect more escalations from the mechanic than before, at LOW, and treat that as the rule working rather than as noise. Planned launches gain one fable dispatch each.
+- Verify: `.phaneslight/config.json` contains `"phanesLightVersion": "3.7.1"`; `<slug>-mechanic` states that it never writes code and escalates at LOW; `<slug>-reviewer` states that it never writes code, that it writes plan files and names them, and that it reviews the plan at launch; the root `CLAUDE.md` names the plan-review duty; `.claude/agents/` still contains exactly five files; and every installed template's stamp reads `phaneslight-template v3.7.1`. Run `/phaneslightupgrade`.
 
 ---
 
@@ -81,13 +58,13 @@ The `v3.6.1` tag still carries the last manual release whole and runnable.
 
 ### 1. Renamed: Phanes is now PhanesLight
 
-The product is **PhanesLight**. The prompt is `phaneslight.md`, the upgrade prompt is `PhanesLightUpgrade.md`, the commands are `/phaneslight:run` and `/phaneslight:upgrade`, the CLI dispatcher is `phaneslight`, project state lives in `.phaneslight/` with the run counter at `.claude/.phaneslight`, and the config key is `phanesLightVersion`. `/phaneslight:upgrade` migrates an existing install: it moves the state directory, moves the marker, rewrites the hook commands in `.claude/settings.json`, renames the installed command files and regenerates the roster. **Redirect stubs remain at the old `phanes.md` and `PhanesUpgrade.md` paths** so an installed v3.4.1 copy, which polls those exact URLs, still sees that an upgrade shipped and can route itself to the upgrade command.
+The product is **PhanesLight**. The prompt is `phaneslight.md`, the upgrade prompt is `PhanesLightUpgrade.md`, the commands are `/phaneslight` and `/phaneslightupgrade`, the CLI dispatcher is `phaneslight`, project state lives in `.phaneslight/` with the run counter at `.claude/.phaneslight`, and the config key is `phanesLightVersion`. `/phaneslightupgrade` migrates an existing install: it moves the state directory, moves the marker, rewrites the hook commands in `.claude/settings.json`, renames the installed command files and regenerates the roster. **Redirect stubs remain at the old `phanes.md` and `PhanesUpgrade.md` paths** so an installed v3.4.1 copy, which polls those exact URLs, still sees that an upgrade shipped and can route itself to the upgrade command.
 
 ### 2. Moved: the repository is now `Aloim/phaneslight`
 
 The legacy `Aloim/phanes` repository is being handed to a separate and **more sophisticated Phanes project** that inherits the name. PhanesLight is a bootstrap prompt, is staying one, and is moving aside rather than being absorbed; the two will ship side by side.
 
-**v3.6.1 is published to both repositories, deliberately and once,** so installations still checking the legacy URL see this release and repoint themselves during the upgrade. **Every later version ships to `Aloim/phaneslight` only.** `/phaneslight:upgrade` rewrites every distribution URL in the installed prompts and scripts and reports the count. The line-1 stamp check (`<!-- PhanesLight v`) is what keeps a fetch from the legacy repository harmless once it holds a different product, and it is never to be relaxed to accommodate a rename.
+**v3.6.1 is published to both repositories, deliberately and once,** so installations still checking the legacy URL see this release and repoint themselves during the upgrade. **Every later version ships to `Aloim/phaneslight` only.** `/phaneslightupgrade` rewrites every distribution URL in the installed prompts and scripts and reports the count. The line-1 stamp check (`<!-- PhanesLight v`) is what keeps a fetch from the legacy repository harmless once it holds a different product, and it is never to be relaxed to accommodate a rename.
 
 **The upgrade gains a legacy-name gate, and it is the migration's load-bearing safety check.** Every legacy signal the upgrade reads keys on the **pre-rename name space**: `.phanes/`, `.claude/.phanes`, `phanesVersion`. Up to v3.4.1 that name space belonged to this product alone, so its presence *proved* a legacy install. It no longer does: the incoming Phanes project inherits the repository and the name, and an install of it presents the same directory, marker and command name. Migrating one would be file surgery on another product's state, performed by a prompt that does not know its layout. **The pre-rename name space now belongs to PhanesLight only at v3.4.1 and below**, a set that is closed and will never grow. A `.phanes/` install at v3.5.0 or above, at a version outside the published pre-rename history, or with no readable version at all, is refused with an explanation and nothing is touched; both directories carrying a `config.json` is a stop-and-ask, since an interrupted migration and two products in one repository need opposite handling. The asymmetry is the argument: refusing a genuine legacy install costs one clarifying answer, adopting a foreign one starts a migration that cannot be finished or undone. `PhanesLightUpgrade.md` Step 3b carries the routing table; Phase U4 item 25 verifies the gate was evaluated.
 
@@ -127,7 +104,7 @@ Five defects that hit every install, each fixed on both platforms with byte-iden
 **Installed project impact:**
 - Affected: every distribution URL in `.claude/commands/phaneslight.md`, `.claude/commands/phaneslightupgrade.md` and `.phaneslight/scripts/` (repointed to `Aloim/phaneslight`); `.phaneslight/scripts/` (`new-file`, `doc-index`, `register-check`, `loc-check`, `module-list` on both platforms, plus all template stamps at `phaneslight-template v3.6.1`, fetched pinned to the `v3.6.1` tag); the project root `CLAUDE.md` (the new `pinned:project` namespace, the Pinned Directives model entry, and the Installed Capability Register's new `matched:` field); `.claude/agents/*` (the two spawn-grant holders restate Durable Returns and the degradation posture); `.claude/workflows/` (at least one recurring-maintenance workflow added); and `.phaneslight/config.json` (`"phanesLightVersion": "3.6.1"`).
 - Breaking: **no**, at the API level. Every script change is additive or a rename of advisory output that no consumer parses (`update-preflight`'s register sensor reads only the status brackets). `module-list`'s default output is deliberately unchanged. The one behaviour change to watch is `new-file`: a `.md` target under `docRoot` now receives the DOC header rather than a module stamp, which is the fix, and it announces itself on every such call. Existing `_index.md` files reorder once on the next `doc-index` run, which is a one-time diff, not a loss.
-- Verify: `.phaneslight/config.json` contains `"phanesLightVersion": "3.6.1"`; `grep -r "Aloim/phanes\b" .claude/ .phaneslight/` returns nothing; the root `CLAUDE.md` carries a `pinned:project` block and the upgrade did **not** write content into it; `new-file <any module> <docRoot>/tmp-check.md "a five word description here"` prints the promotion note and writes a `<!-- DOC |` header; `doc-index` then lists that folder's newest-numbered file first; `loc-check` ends with either `loc-check: OK` or a count line; and `<slug>-orchestrator` and `<slug>-reviewer` both state the durable-returns rule and the degradation ladder. Run `/phaneslight:upgrade`.
+- Verify: `.phaneslight/config.json` contains `"phanesLightVersion": "3.6.1"`; `grep -r "Aloim/phanes\b" .claude/ .phaneslight/` returns nothing; the root `CLAUDE.md` carries a `pinned:project` block and the upgrade did **not** write content into it; `new-file <any module> <docRoot>/tmp-check.md "a five word description here"` prints the promotion note and writes a `<!-- DOC |` header; `doc-index` then lists that folder's newest-numbered file first; `loc-check` ends with either `loc-check: OK` or a count line; and `<slug>-orchestrator` and `<slug>-reviewer` both state the durable-returns rule and the degradation ladder. Run `/phaneslightupgrade`.
 
 ---
 
@@ -135,7 +112,7 @@ Five defects that hit every install, each fixed on both platforms with byte-iden
 
 The review chain is replaced by a model-tier escalation ladder. PhanesLight now generates exactly five agents for every project, named by model tier rather than by domain: `<slug>-orchestrator` (opus, the main executor as well as the orchestrator), `<slug>-reviewer` (fable, dispatched only for HIGH and CRIT findings, plans a fix and hands it back), `<slug>-worker` (sonnet) and `<slug>-mechanic` (haiku), which write within their dispatched scope and disclose every edit, and `<slug>-closure` (sonnet), which writes no code and is the system's only independent verifier. Findings travel upward by severity instead of artifacts travelling sideways through review gates.
 
-**Renamed.** The product is now **PhanesLight**. The prompt is `phaneslight.md`, the upgrade prompt is `PhanesLightUpgrade.md`, the commands are `/phaneslight:run` and `/phaneslight:upgrade`, the dispatcher is `phaneslight`, and project state lives in `.phaneslight/` with the run counter at `.claude/.phaneslight`. The GitHub repository keeps its name at `Aloim/phanes`; only the file inside it moved. Existing installs are migrated by `/phaneslight:upgrade`, which moves the state directory, rewrites the hook paths in `.claude/settings.json` and renames the config key `phanesVersion` to `phanesLightVersion`. Redirect stubs remain at the old `phanes.md` and `PhanesUpgrade.md` paths so an installed v3.4.1 copy still sees that an upgrade shipped. **Restart the session after upgrading**; hook configuration is snapshotted at session start.
+**Renamed.** The product is now **PhanesLight**. The prompt is `phaneslight.md`, the upgrade prompt is `PhanesLightUpgrade.md`, the commands are `/phaneslight` and `/phaneslightupgrade`, the dispatcher is `phaneslight`, and project state lives in `.phaneslight/` with the run counter at `.claude/.phaneslight`. The GitHub repository keeps its name at `Aloim/phanes`; only the file inside it moved. Existing installs are migrated by `/phaneslightupgrade`, which moves the state directory, rewrites the hook paths in `.claude/settings.json` and renames the config key `phanesVersion` to `phanesLightVersion`. Redirect stubs remain at the old `phanes.md` and `PhanesUpgrade.md` paths so an installed v3.4.1 copy still sees that an upgrade shipped. **Restart the session after upgrading**; hook configuration is snapshotted at session start.
 
 ### Removed
 
@@ -154,7 +131,7 @@ A 350k soft context ceiling on every agent, with close-out beginning at the ceil
 **Installed project impact:**
 - Affected: `.claude/agents/*` (all five files are generated fresh from the new lineup; every pre-v3.6.0 agent file is deleted, not patched), the project root `CLAUDE.md` (the Pinned Directives per-agent model entry, the lineup and ladder summary, and workflow rules 3 to 5 and 8 to 14), `.claude/workflows/*.yaml` (regenerated; `ui-change` re-anchored to `<slug>-closure`), `.claude/template/agent-definition.md` and `.claude/template/report.md` (the Critic block removed, the closure block rewritten), `.phaneslight/config.json` (`phanesLightVersion`), and all template stamps (`phaneslight-template v3.6.0`, fetched pinned to the `v3.6.0` tag). `preflight.ps1`'s archetype array is deliberately NOT updated: naming the retired archetypes is how a pre-3.6.0 install is detected, and updating it would leave every legacy install undetectable.
 - Breaking: yes, at the roster level. Every agent file is replaced wholesale, and a v3.4.1 agent cannot be hand-patched into a v3.6.0 role because the operating protocols differ throughout. Any automation dispatching by a retired role name stops resolving. Behaviourally, no artifact is reviewed before it is applied: verification moves to mandatory disclosure of every edit plus `<slug>-closure`'s independent re-derivation at every close, and `<slug>-reviewer` is dispatched for HIGH and CRIT only.
-- Verify: `.phaneslight/config.json` contains `"phanesLightVersion": "3.6.0"`; `.claude/agents/` contains exactly five files, `<slug>-orchestrator`, `<slug>-reviewer`, `<slug>-worker`, `<slug>-mechanic` and `<slug>-closure`; `<slug>-reviewer` declares `model: fable` and grants no write tools; `<slug>-mechanic` declares `model: haiku` and carries no `effort:` line; `grep -rn "fix_required\|Reflect\|verdicts" .claude/agents/` returns nothing, all three being retired at v3.6.0; and every agent file states the 350k context ceiling and that no agent is ever forked. Run `/phaneslight:upgrade`.
+- Verify: `.phaneslight/config.json` contains `"phanesLightVersion": "3.6.0"`; `.claude/agents/` contains exactly five files, `<slug>-orchestrator`, `<slug>-reviewer`, `<slug>-worker`, `<slug>-mechanic` and `<slug>-closure`; `<slug>-reviewer` declares `model: fable` and grants no write tools; `<slug>-mechanic` declares `model: haiku` and carries no `effort:` line; `grep -rn "fix_required\|Reflect\|verdicts" .claude/agents/` returns nothing, all three being retired at v3.6.0; and every agent file states the 350k context ceiling and that no agent is ever forked. Run `/phaneslightupgrade`.
 
 ---
 
