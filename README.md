@@ -1,6 +1,6 @@
 # PhanesLight
 
-> ## ⚠️ v3.7.1 — This repository is the MANUAL install again
+> ## v3.7.1 — This repository is the MANUAL install again
 >
 > **The plugin release that landed here at v3.7.0 was a mistake, and it is reverted.** The plugin was built for the **Claude community marketplace** and was never meant to replace this repository's contents. Publishing it here retired the manual install path as a side effect, which was not the intent. It has been moved to its own home at [`github.com/Aloim/phanesplugin`](https://github.com/Aloim/phanesplugin), and **this repository is the manual, single-file PhanesLight, as it was through v3.6.1.**
 >
