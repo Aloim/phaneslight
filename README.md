@@ -2,11 +2,11 @@
 
 > ## v3.7.1 — This repository is the MANUAL install again
 >
-> **The plugin release that landed here at v3.7.0 was a mistake, and it is reverted.** The plugin was built for the **Claude community marketplace** and was never meant to replace this repository's contents. Publishing it here retired the manual install path as a side effect, which was not the intent. It has been moved to its own home at [`github.com/Aloim/phanesplugin`](https://github.com/Aloim/phanesplugin), and **this repository is the manual, single-file PhanesLight, as it was through v3.6.1.**
+> **The plugin release that landed here at v3.7.0 was a mistake, and it is reverted.** The plugin was built for the **Claude community marketplace** and was never meant to replace this repository's contents. Publishing it here retired the manual install path as a side effect, which was not the intent. It has been moved to its own home at [`github.com/Aloim/phaneslightplugin`](https://github.com/Aloim/phaneslightplugin), and **this repository is the manual, single-file PhanesLight, as it was through v3.6.1.**
 >
 > **If you are on the manual install (you fetched `phaneslight.md` into `.claude/commands/`), nothing was ever taken away from you.** v3.6.2 announced that your path was closing. Disregard it. Fetch v3.7.1 and carry on; see [Upgrading an older install](#upgrading-an-older-install).
 >
-> **If you installed the plugin from this repository in the meantime**, the marketplace here no longer resolves. Either re-add it from `Aloim/phanesplugin`, or move to the manual install; both routes are written out under [Coming from the plugin](#coming-from-the-plugin).
+> **If you installed the plugin from this repository in the meantime**, the marketplace here no longer resolves. Either re-add it from `Aloim/phaneslightplugin`, or move to the manual install; both routes are written out under [Coming from the plugin](#coming-from-the-plugin).
 >
 > **There is no manual v3.7.0**, because v3.7.0 was the plugin. A manual install goes from v3.6.1 straight to v3.7.1.
 >
@@ -28,7 +28,7 @@
 >
 > **v3.6.1 is published to BOTH repositories,** deliberately and once. Installations that still check the old URL will see this release, offer you the upgrade, and repoint themselves at the new repository as part of it. **Later versions ship to `Aloim/phaneslight`**, and v3.7.1 was published to both again for the same reason. If you skip this upgrade, your install stops seeing releases and will eventually be checking a repository that holds a different product.
 >
-> **The plugin now lives at [`Aloim/phanesplugin`](https://github.com/Aloim/phanesplugin)**: `/plugin marketplace add Aloim/phanesplugin`, then `/plugin install phaneslight@phaneslight`.
+> **The plugin now lives at [`Aloim/phaneslightplugin`](https://github.com/Aloim/phaneslightplugin)**: `/plugin marketplace add Aloim/phaneslightplugin`, then `/plugin install phaneslight@phaneslight`.
 >
 > **Prefer the old workflow? It is kept whole.** v3.6.0 replaced the review chain with an escalation ladder, which is a real change in how work gets verified, so [`older version/v3.4.1/`](older%20version/v3.4.1/) now holds the **complete** last pre-ladder distribution — prompt, upgrade prompt, README, changelog and full template library — rather than a bare prompt file. Every earlier version has been removed from that folder. Read both and pick; the choice is yours, not ours.
 >
@@ -424,13 +424,13 @@ The jump is small and additive. Nothing in your project structure moves, `migrat
 
 ### Coming from the plugin
 
-The plugin published at v3.7.0 was meant for the Claude community marketplace and should never have replaced this repository's contents. It now lives at [`Aloim/phanesplugin`](https://github.com/Aloim/phanesplugin). **A marketplace you added from `Aloim/phaneslight` no longer resolves**, because the plugin tree has been removed from here. Pick one of two routes.
+The plugin published at v3.7.0 was meant for the Claude community marketplace and should never have replaced this repository's contents. It now lives at [`Aloim/phaneslightplugin`](https://github.com/Aloim/phaneslightplugin). **A marketplace you added from `Aloim/phaneslight` no longer resolves**, because the plugin tree has been removed from here. Pick one of two routes.
 
 **Route A: stay on the plugin.** Nothing in this repository applies to you, and no command you type changes. The plugin and the marketplace both kept the name `phaneslight`, so only the source moved:
 
 ```
 /plugin marketplace remove phaneslight
-/plugin marketplace add Aloim/phanesplugin
+/plugin marketplace add Aloim/phaneslightplugin
 /plugin install phaneslight@phaneslight
 ```
 
@@ -493,7 +493,7 @@ PhanesLight never installs these. The census discovers them only if you installe
 v3.7.0 published the Claude Code plugin into this repository and, in doing so, replaced the manual prompt with a retirement notice. That was a mistake. The plugin was built for the **Claude community marketplace** and belonged in its own repository from the start; nothing about shipping it required closing the manual path. Both halves are corrected here:
 
 - **`Aloim/phaneslight` (this repository) is the manual, single-file PhanesLight.** `phaneslight.md`, `PhanesLightUpgrade.md` and the template library are published here, as they were through v3.6.1. The v3.6.2 retirement notice is withdrawn.
-- **`Aloim/phanesplugin` is the plugin.** Its marketplace, skills and hook registration live there. The plugin is still named `phaneslight`, so `/phaneslight:run` and `/phaneslight:upgrade` are unchanged for anyone already using it; only the marketplace source moved.
+- **`Aloim/phaneslightplugin` is the plugin.** Its marketplace, skills and hook registration live there. The plugin is still named `phaneslight`, so `/phaneslight:run` and `/phaneslight:upgrade` are unchanged for anyone already using it; only the marketplace source moved.
 
 The two are separate products with separate mechanics for version checking, script delivery and hook registration. Keeping both in one repository is what forced the false choice in the first place.
 
