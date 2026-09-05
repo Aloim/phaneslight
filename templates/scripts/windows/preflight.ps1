@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 preflight
+# phaneslight-template v3.8.0 preflight
 # Phase 0 mechanical pre-flights, observed and reported, NEVER acted on: run-type marker,
 # installed version, upstream stamp (network-tolerant, 10s timeout, single attempt), the four
 # standard MCP servers via `claude mcp list`, platform, capability-census counts, and the
@@ -515,9 +515,11 @@ $userHome = Get-PhanesLightHomeDirectory
 $userClaude = $null
 if ($userHome) { $userClaude = Join-Path $userHome '.claude' }
 $agentFiles = @()
+$agentsUnreadable = $false
 $agentsDir = Join-Path $root '.claude\agents'
 if (Test-Path -LiteralPath $agentsDir) {
-  try { $agentFiles = @(Get-ChildItem -LiteralPath $agentsDir -File -Filter '*.md' -ErrorAction Stop) } catch { $agentFiles = @() }
+  try { $agentFiles = @(Get-ChildItem -LiteralPath $agentsDir -File -Filter '*.md' -ErrorAction Stop) }
+  catch { [void]$censusUnreadable.Add($agentsDir); [Console]::Error.WriteLine("preflight: cannot enumerate $agentsDir; reported as null, not 0"); $agentsUnreadable = $true; $agentFiles = @() }
 }
 $pluginCount = $null
 $pluginsJson = $null
@@ -538,7 +540,7 @@ if ($pluginsJson -and (Test-Path -LiteralPath $pluginsJson)) {
 }
 elseif ($userClaude) { $pluginCount = 0 }
 $censusCounts = [ordered]@{
-  agents = $agentFiles.Count
+  agents = $(if ($agentsUnreadable) { $null } else { $agentFiles.Count })
   commandsProject = Count-Files (Join-Path $root '.claude\commands') '*.md'
   commandsUser = $(if ($userClaude) { Count-Files (Join-Path $userClaude 'commands') '*.md' } else { $null })
   plugins = $pluginCount
@@ -562,10 +564,38 @@ foreach ($f in $agentFiles) {
     if ($head.IndexOf('sequential-thinking', [System.StringComparison]::OrdinalIgnoreCase) -ge 0) { [void]$seqRefs.Add($f.Name) }
   } catch { }
 }
+# An unreadable subtree used to be skipped in silence, which made this counter do exactly what
+# the agents counter did before c1f8b6a: report a smaller number instead of an unknown one.
+# It matters for the same reason. subfolderClaudeMdCount is one of the legacy-migration signals
+# the session weighs when it decides whether to STOP and route to PhanesLightUpgrade, so a
+# project whose sprawl sits inside a denied subtree could be told it has less of it than it
+# has, and the run would act on that. -ErrorVariable keeps the walk going past a denied rung,
+# because naming every denied directory is more useful than stopping at the first, but the
+# COUNT it produces is discarded: a null count is not a zero.
 $claudeMdSprawl = $null
+$sprawlErr = $null
 try {
-  $claudeMdSprawl = @(Get-ChildItem -LiteralPath $root -Recurse -Depth 3 -File -Filter 'CLAUDE.md' -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -cne $root }).Count
-} catch { $claudeMdSprawl = $null }
+  $sprawlSeen = @(Get-ChildItem -LiteralPath $root -Recurse -Depth 3 -File -Filter 'CLAUDE.md' -ErrorAction SilentlyContinue -ErrorVariable sprawlErr | Where-Object { $_.DirectoryName -cne $root }).Count
+  if ($sprawlErr -and $sprawlErr.Count -gt 0) {
+    $deniedArr = [string[]]@($sprawlErr | ForEach-Object { [string]$_.TargetObject } | Where-Object { $_ } | Select-Object -Unique)
+    [Array]::Sort($deniedArr, [System.StringComparer]::Ordinal)
+    # The sprawl walk covers the whole project to depth 3, so it also descends through
+    # .claude\agents and would name a denied agents directory a SECOND time. Reporting the same
+    # path twice makes censusUnreadable read like two separate findings, so an entry already
+    # recorded by an earlier counter is skipped here rather than repeated.
+    foreach ($p in $deniedArr) {
+      if ($censusUnreadable -contains $p) { continue }
+      [void]$censusUnreadable.Add($p)
+      [Console]::Error.WriteLine("preflight: cannot enumerate $p; reported as null, not 0")
+    }
+    $claudeMdSprawl = $null
+  }
+  else { $claudeMdSprawl = $sprawlSeen }
+} catch {
+  [void]$censusUnreadable.Add($root)
+  [Console]::Error.WriteLine("preflight: cannot enumerate $root; reported as null, not 0")
+  $claudeMdSprawl = $null
+}
 $unprefixedArr = $unprefixed.ToArray(); [Array]::Sort($unprefixedArr, [System.StringComparer]::Ordinal)
 $seqArr = $seqRefs.ToArray(); [Array]::Sort($seqArr, [System.StringComparer]::Ordinal)
 
@@ -579,11 +609,11 @@ $seqArr = $seqRefs.ToArray(); [Array]::Sort($seqArr, [System.StringComparer]::Or
 $legacyMarkers = [ordered]@{
   noVersionStamp = (($runType -cne 'setup') -and ($null -eq $installedVersion))
   unprefixedTemplateAgents = @($unprefixedArr | Select-Object -First $CAP)
-  unprefixedTemplateAgentsCount = $unprefixedArr.Count
+  unprefixedTemplateAgentsCount = $(if ($agentsUnreadable) { $null } else { $unprefixedArr.Count })
   sequentialThinkingAgents = @($seqArr | Select-Object -First $CAP)
-  sequentialThinkingAgentsCount = $seqArr.Count
+  sequentialThinkingAgentsCount = $(if ($agentsUnreadable) { $null } else { $seqArr.Count })
   subfolderClaudeMdCount = $claudeMdSprawl
-  listTruncated = (($unprefixedArr.Count -gt $CAP) -or ($seqArr.Count -gt $CAP))
+  listTruncated = $(if ($agentsUnreadable) { $false } else { ($unprefixedArr.Count -gt $CAP) -or ($seqArr.Count -gt $CAP) })
 }
 
 $digest = [ordered]@{

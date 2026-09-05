@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.7.1 hook-stamp-guard
+# phaneslight-template v3.8.0 hook-stamp-guard
 # PreToolUse(Write) guard. Reads the tool-call JSON from stdin. Denies (exit 2) creation of a NEW
 # file under a stamped tree whose content lacks the required header stamp, so new files must go
 # through `phaneslight new-file`. Every other call passes (exit 0). Fails open on any parse trouble.
@@ -67,6 +67,5 @@ done
 printf '%s' "$raw" | grep -q 'Soft size threshold: 500 LOC' && exit 0
 printf '%s' "$raw" | grep -q '<!-- DOC |' && exit 0
 
-DASH=$(printf '\342\200\224')
-printf 'New files must be created via `phaneslight new-file` %s the stamp is what `regen-registry` slices modules by; bypassing it produces silent API-baseline drift.\n' "$DASH" >&2
+printf 'New files must be created via `phaneslight new-file`, the stamp is what `regen-registry` slices modules by; bypassing it produces silent API-baseline drift.\n' >&2
 exit 2

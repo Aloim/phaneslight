@@ -11,6 +11,11 @@
         "matcher": "Write|Edit",
         "hooks": [{ "type": "command", "command": ".phaneslight/scripts/hook-size-check.sh" }]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": ".phaneslight/scripts/hook-ledger-status.sh" }]
+      }
     ]
   }
 }

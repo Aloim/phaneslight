@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 batch-apply
+# phaneslight-template v3.8.0 batch-apply
 # Applies a batch of {file, old, new} exact-match edits and prints a per-edit review diff
 # computed against saved pre-images. Git is NOT a dependency: the undo substrate is a
 # byte-for-byte pre-image of every file touched, saved before the first write, so this
@@ -23,8 +23,13 @@ function Find-PhanesLightRoot {
   }
 }
 
-# --- node-parity JSON emitter (JSON.stringify(x, null, 2) format), so the stdout report is
-# --- byte-identical to the POSIX sibling and callers can diff outputs across platforms.
+# --- node-parity JSON emitter (JSON.stringify(x, null, 2) format), so callers can diff this
+# --- report against the POSIX sibling's. The parity claim is scoped, and the scoping was
+# --- measured rather than assumed (v3.7.2): this host appends CRLF to every Write-Output
+# --- object when stdout is redirected, so the report differs from the sibling's by exactly the
+# --- terminating CR. What holds is: identical exit code, identical stdout after stripping CR,
+# --- and every file written byte-identical. The earlier comment here claimed byte-identical
+# --- stdout, which was never true.
 function ConvertTo-JsonStringLiteral([string]$s) {
   $sb = New-Object System.Text.StringBuilder
   [void]$sb.Append('"')

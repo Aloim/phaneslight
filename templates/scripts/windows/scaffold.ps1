@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 scaffold
+# phaneslight-template v3.8.0 scaffold
 # Mechanizes Phase 2.5 Steps 1, 1b, and 2: creates the documentation tree (under the
 # configured docRoot), the tests tree, and the four verbatim README files, reading the README
 # bodies from the installed prompt templates (.claude/template/readme-docs.md and
@@ -324,15 +324,33 @@ function Fail-Scaffold([string]$item, [string]$why) {
 function Ensure-Dir([string]$rel) {
   $full = Join-Path $script:root ($rel -replace '/', '\')
   if (-not (Test-PhanesLightContained $script:root $full)) { Fail-Scaffold $rel 'resolves outside the project root' }
-  if (Test-Path -LiteralPath $full) { [void]$script:skipped.Add($rel + '/'); return }
-  try { New-Item -ItemType Directory -Force -Path $full -ErrorAction Stop | Out-Null }
+  # Typed, not bare. A bare Test-Path is true for a FILE sitting where a directory belongs, and
+  # the run then printed "EXISTS <rel>/" for it: the trailing slash was the lie. Nothing below it
+  # can be created and the contract forbids replacing it, so it is a failure, never EXISTS.
+  if (Test-Path -LiteralPath $full) {
+    if (Test-Path -LiteralPath $full -PathType Container) { [void]$script:skipped.Add($rel + '/'); return }
+    Fail-Scaffold $rel 'exists but is not a directory'
+  }
+  # CreateDirectory, not New-Item -ItemType Directory -Force: with an ancestor that is a file the
+  # latter returns $null, raises nothing and creates nothing, so the run announced CREATED for
+  # directories that were never made. CreateDirectory throws and names the blocking path, which is
+  # the same fact mkdir prints on POSIX.
+  try { [System.IO.Directory]::CreateDirectory($full) | Out-Null }
   catch { Fail-Scaffold $rel $_.Exception.Message }
+  # The post-condition the old creation call broke in silence, stated rather than assumed:
+  # created means present afterwards. It protects whoever swaps the creation call back.
+  if (-not (Test-Path -LiteralPath $full -PathType Container)) { Fail-Scaffold $rel 'no error was raised and the directory does not exist afterwards' }
   [void]$script:created.Add($rel + '/')
 }
 function Ensure-File([string]$rel, [string]$content) {
   $full = Join-Path $script:root ($rel -replace '/', '\')
   if (-not (Test-PhanesLightContained $script:root $full)) { Fail-Scaffold $rel 'resolves outside the project root' }
-  if (Test-Path -LiteralPath $full) { [void]$script:skipped.Add($rel); return }
+  # Typed, not bare, for the same reason with the types swapped: a DIRECTORY at a file's path was
+  # reported as "EXISTS <rel>" and the run exited 0 with the file never written.
+  if (Test-Path -LiteralPath $full) {
+    if (Test-Path -LiteralPath $full -PathType Leaf) { [void]$script:skipped.Add($rel); return }
+    Fail-Scaffold $rel 'exists but is not a file'
+  }
   try { [System.IO.File]::WriteAllText((Join-Path $script:root ($rel -replace '/', '\')), $content, $UTF8_NO_BOM) }
   catch { Fail-Scaffold $rel $_.Exception.Message }
   [void]$script:created.Add($rel)

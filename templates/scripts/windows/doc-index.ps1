@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 doc-index
+# phaneslight-template v3.8.0 doc-index
 # Regenerates every _index.md under the documentation tree (archive/ excluded). SOLE WRITER of
 # indexes; hand-editing them is forbidden. Each entry is extracted in fallback order: DOC header
 # line, then first heading, then humanized filename, so files predating the discipline are indexed
@@ -99,7 +99,18 @@ function Build-Index([string]$folder) {
   if ($name -eq 'archive') { return }
   if (Test-Excluded $folder) { return }
 
-  $children = Get-ChildItem -LiteralPath $folder -Force -ErrorAction SilentlyContinue
+  # A folder that cannot be LISTED is not an empty folder. Without this refusal the listing
+  # came back empty and the generator went on to WRITE that emptiness: an existing, correct
+  # _index.md was overwritten with nothing but a header and a title. That is not a wrong
+  # number, it is a destroyed artifact. The state that triggers it is unreadable-and-writable,
+  # which is exactly what a deny-read ACL produces. Same refusal, same words, as the POSIX
+  # sibling, which is where it was reproduced.
+  $children = $null
+  try { $children = @(Get-ChildItem -LiteralPath $folder -Force -ErrorAction Stop) }
+  catch {
+    [Console]::Error.WriteLine("doc-index: cannot list $folder, leaving its index untouched")
+    return
+  }
   $subfolders = @($children | Where-Object { $_.PSIsContainer -and $_.Name -ne 'archive' })
   $mdFiles = @($children | Where-Object { -not $_.PSIsContainer -and $_.Extension -eq '.md' -and $_.Name -ne '_index.md' -and $_.Name -ne '_index_archive.md' })
 

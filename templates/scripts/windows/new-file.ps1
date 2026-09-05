@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 new-file
+# phaneslight-template v3.8.0 new-file
 # Creates a file with the required header stamp. The only sanctioned way to create files.
 # Usage: phaneslight new-file <module> <path> "<description of at least five words>"
 # <module> may be a source module, tests, or docs. Header selection is by DESTINATION, not by the
@@ -157,18 +157,20 @@ if ($parent -and -not (Test-Path -LiteralPath $parent)) {
 }
 
 # Emit non-ASCII via char codes so this script file stays pure ASCII and survives any re-encoding.
-$dash = [string][char]0x2014
+# The em dash this once built is gone: the canonical header in templates/prompts/doc-header.md
+# separates those two clauses with a comma, and a script that writes a dash into every generated
+# documentation file is the one place the house rule against dashes is most expensive to break.
 $bt = [string][char]0x60
 
 if ($isDocs) {
   $header = @"
 <!-- DOC | $description -->
 <!-- DOC DISCIPLINE | Soft ceiling: 500 lines. One topic per file; structure under ## headings.
-     The DOC line above feeds ${bt}phaneslight doc-index${bt} $dash keep it accurate; it is this file's line in _index.md.
+     The DOC line above feeds ${bt}phaneslight doc-index${bt}, keep it accurate; it is this file's line in _index.md.
      If this file exceeds the ceiling: split it into a same-named folder of focused topic files;
      carry both header lines into every part; update every inbound reference in the same change set;
      finish by running ${bt}phaneslight doc-index${bt}.
-     Consumers: NEVER bulk-read documentation folders $dash read _index.md first, load only what you need.
+     Consumers: NEVER bulk-read documentation folders, read _index.md first, load only what you need.
      Audit: ${bt}phaneslight doc-check${bt}. -->
 
 "@

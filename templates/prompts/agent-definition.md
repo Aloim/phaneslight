@@ -1,5 +1,5 @@
 <!-- DOC | The sub-agent definition template PhanesLight instantiates five times per project in Phase 4, once per role in the fixed lineup; these two provenance header lines are never copied into generated agents. -->
-<!-- phaneslight-template v3.7.1 agent-definition -->
+<!-- phaneslight-template v3.8.0 agent-definition -->
 ---
 name: <projectSlug>-<role>   # MUST equal the filename stem, e.g. acme-worker
 description: "Provides [concise capability/purpose]. MUST BE USED for [hard-trigger topics or cues]. Use PROACTIVELY when you hear [trigger keywords / scenario examples]. â‰¤50 words total."

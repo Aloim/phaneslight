@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 update-preflight
+# phaneslight-template v3.8.0 update-preflight
 # The update-run fast-path aggregator: runs the sensors (census-diff, hook table, register
 # breach state, manifest sha256 drift, module-list vs config, optional spec-version compare)
 # and the git delta, and emits ONE JSON verdict {sensors, quiet, gitDelta}. quiet is true only
@@ -568,7 +568,15 @@ foreach ($name in @('census', 'hooks', 'register', 'manifest', 'modules')) {
   $s = $sensors[$name]
   if (-not $s.available -or $s.delta) { $quiet = $false }
 }
-if ($sensors.spec.available -and $sensors.spec.delta) { $quiet = $false }
+# The spec sensor gates on its DELTA alone, never on its availability. It sits outside the loop
+# because ONE of its unavailable shapes is legitimately quiet: nobody passed the flag, delta is
+# false, and Step 0 covers the check by other means. The other unavailable shape is a sensor that
+# was asked and FAILED, delta true, and gating on `available` swallowed it: measured on a
+# compliant project, spec.delta was true and quiet was true in the same verdict, which is a
+# silent all-clear from a sensor that had just said it could not measure. Reading delta alone
+# keeps the no-flag case quiet and lets the failed reading gate, which is what the sensor comment
+# above has promised since the M5 repair.
+if ($sensors.spec.delta) { $quiet = $false }
 
 Write-Output (ConvertTo-NodeJson ([ordered]@{ sensors = $sensors; quiet = $quiet; gitDelta = $gitDelta }) 0)
 exit 0

@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 hook-stamp-guard
+# phaneslight-template v3.8.0 hook-stamp-guard
 # PreToolUse(Write) guard. Reads the tool-call JSON from stdin. Denies (exit 2) creation of a NEW
 # file under a stamped tree whose content lacks the required header stamp, so new files must go
 # through `phaneslight new-file`. Every other call passes (exit 0). Fails open on tool-call JSON or IO
@@ -71,7 +71,7 @@ try {
   $hasDoc = $content -match '<!--\s*DOC\s*\|'
   if ($hasSource -or $hasDoc) { exit 0 }
 
-  [Console]::Error.WriteLine("New files must be created via ``phaneslight new-file`` $([char]0x2014) the stamp is what ``regen-registry`` slices modules by; bypassing it produces silent API-baseline drift.")
+  [Console]::Error.WriteLine("New files must be created via ``phaneslight new-file``, the stamp is what ``regen-registry`` slices modules by; bypassing it produces silent API-baseline drift.")
   exit 2
 } catch {
   # Never wedge the session on a parse or IO error.

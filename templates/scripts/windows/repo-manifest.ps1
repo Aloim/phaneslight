@@ -1,4 +1,4 @@
-# phaneslight-template v3.7.1 repo-manifest
+# phaneslight-template v3.8.0 repo-manifest
 # Generates the deterministic raw file list (.phaneslight/inventory/raw-files.txt, from
 # git ls-files, docRoot/.phaneslight/.claude trees and binary extensions excluded) and diffs
 # it against the Claude-maintained annotated summary list (annotated-files.json, shape
@@ -27,8 +27,13 @@ function Find-PhanesLightRoot {
   }
 }
 
-# --- node-parity JSON emitter (JSON.stringify(x, null, 2) format), so annotated-files.json
-# --- is byte-identical across platforms and the stdout report is line-identical.
+# --- node-parity JSON emitter (JSON.stringify(x, null, 2) format). annotated-files.json IS
+# --- byte-identical across platforms, because this script writes it with WriteAllText and the
+# --- host never touches it. The stdout report is not, and the earlier comment's
+# --- line-identical claim was measured false (v3.7.2): this host appends CRLF to every
+# --- Write-Output object when stdout is redirected, so every reported line differs from the
+# --- sibling's by the terminating CR. What holds is: identical exit code, identical stdout
+# --- after stripping CR, and every file written byte-identical.
 function ConvertTo-JsonStringLiteral([string]$s) {
   $sb = New-Object System.Text.StringBuilder
   [void]$sb.Append('"')

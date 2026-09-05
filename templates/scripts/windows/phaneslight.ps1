@@ -1,10 +1,20 @@
-# phaneslight-template v3.7.1 phaneslight
+# phaneslight-template v3.8.0 phaneslight
 # Dispatcher. Routes `phaneslight <subcommand> [args]` to the sibling script in this directory.
 # Resolves siblings by this script's own location, so it works from any working directory.
 $ErrorActionPreference = 'Stop'
 
 if ($args.Count -lt 1) {
-  Write-Output "phaneslight: subcommands: new-file loc-check doc-check register-check doc-index module-list list-apis regen-registry api-diff repo-manifest batch-apply preflight install-templates scaffold ledger manifest-write census-diff update-preflight"
+  # ENUMERATED from this directory, never hardcoded (v3.8.0). Both dispatchers used to carry a
+  # hand-maintained list and the two had already drifted: the POSIX one named hook-ledger-status
+  # and this one did not. Nothing in the build could see the difference, which is exactly why it
+  # survived. A list derived from the directory cannot disagree with the directory.
+  # Excluded: this dispatcher itself, and the hook-* scripts, which the harness fires on tool
+  # calls and which are not user subcommands.
+  $names = @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1' -File |
+    ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_.Name) } |
+    Where-Object { $_ -ne 'phaneslight' -and $_ -notlike 'hook-*' } |
+    Sort-Object)
+  Write-Output ("phaneslight: subcommands: " + ($names -join ' '))
   exit 0
 }
 

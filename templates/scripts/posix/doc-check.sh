@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.7.1 doc-check
+# phaneslight-template v3.8.0 doc-check
 # Scans the documentation tree (archive/ excluded) for living documents over the 500-line ceiling
 # or missing a DOC header line, for folders holding docs but no _index.md, and for indexes older
 # than their newest sibling. Prints offenders with line counts. Frozen artifact classes (session
@@ -91,6 +91,13 @@ find "$docPath" -type f -name '*.md' ! -path '*/archive/*' | while IFS= read -r 
   [ "$base" = "_index_archive.md" ] && continue
   rel=${f#"$docPath"/}
   is_frozen "$rel" && continue
+
+  # An unreadable file used to be ACCUSED rather than skipped. awk on a denied file still runs
+  # its END block and prints 0, and the DOC-header probe below then finds nothing in a file it
+  # never opened, so the run reported NO-DOC-HEADER for a document that may well carry one.
+  # A checker that invents findings is worse than one that misses them. The Windows sibling has
+  # always named the file and moved on; this is the same behaviour, in the same words.
+  [ -r "$f" ] || { echo "doc-check: cannot read $rel, skipping" >&2; continue; }
 
   lines=$(awk 'END{print NR}' "$f" 2>/dev/null | tr -d ' ')
   if [ -n "$lines" ] && [ "$lines" -gt "$CEILING" ]; then

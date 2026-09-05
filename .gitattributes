@@ -1,0 +1,19 @@
+# Every text file in this distribution is stored, and checked out, with LF endings.
+#
+# Without this file a clone made on Windows under the default core.autocrlf=true arrives with
+# CRLF in the working copy, the POSIX shell scripts under templates/scripts/posix/ included,
+# so their shebang line carries a stray CR on a machine that is expected to run them.
+#
+# The previous release proved the other half of this hazard: CRLF drift inside the shared
+# regions was real and simultaneously invisible to the drift checker, because Windows builds
+# of gawk open files in text mode and silently discard the CR. That half is fixed with
+# BINMODE=3 in lib/posix/check-shared.sh. This file is the half that stops the CRLF from
+# arriving at all, which is why both are needed and neither is sufficient alone.
+#
+# Measured rather than assumed: two identical repositories cloned with core.autocrlf=true, one
+# carrying the line below and one not. Without it a shell script arrived as "ASCII text, with
+# CRLF line terminators". With it, plain LF.
+* text=auto eol=lf
+
+# Images are binary and must never be line-ending converted.
+*.png binary

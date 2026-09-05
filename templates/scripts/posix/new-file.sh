@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.7.1 new-file
+# phaneslight-template v3.8.0 new-file
 # Creates a file with the required header stamp. The only sanctioned way to create files.
 # Usage: phaneslight new-file <module> <path> "<description of at least five words>"
 # <module> may be a source module, tests, or docs. Header selection is by DESTINATION, not by the
@@ -208,17 +208,15 @@ fi
 
 mkdir -p "$(dirname "$full")"
 
-DASH=$(printf '\342\200\224')  # em dash, kept out of the source as bytes
-
 if [ "$isDocs" -eq 1 ]; then
   {
     printf '<!-- DOC | %s -->\n' "$description"
     printf '<!-- DOC DISCIPLINE | Soft ceiling: 500 lines. One topic per file; structure under ## headings.\n'
-    printf '     The DOC line above feeds `phaneslight doc-index` %s keep it accurate; it is this file'"'"'s line in _index.md.\n' "$DASH"
+    printf '     The DOC line above feeds `phaneslight doc-index`, keep it accurate; it is this file'"'"'s line in _index.md.\n'
     printf '     If this file exceeds the ceiling: split it into a same-named folder of focused topic files;\n'
     printf '     carry both header lines into every part; update every inbound reference in the same change set;\n'
     printf '     finish by running `phaneslight doc-index`.\n'
-    printf '     Consumers: NEVER bulk-read documentation folders %s read _index.md first, load only what you need.\n' "$DASH"
+    printf '     Consumers: NEVER bulk-read documentation folders, read _index.md first, load only what you need.\n'
     # Exactly one trailing LF after the header block, matching new-file.ps1 byte for byte.
     printf '     Audit: `phaneslight doc-check`. -->\n'
   } > "$full"
