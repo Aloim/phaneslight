@@ -315,7 +315,9 @@ It refreshes your `/phaneslight` command, detects the installed version, plans t
 
 You normally arrive here from `/phaneslight` itself, which offers the upgrade whenever a newer version has shipped.
 
-**From v3.7.1**, the jump is small and additive. There is no manual v3.7.2; the POSIX parity work published under that number on the plugin line is folded into v3.8.0 instead, so you go straight from v3.7.1 to v3.8.0 and skip nothing.
+**From v3.8.0**, this is a patch release: an in-place update, no migration boundary crossed. It replaces `hook-stamp-guard` and `doc-check` on both platforms and the spec paragraphs describing them. Expect `doc-check` to start reporting living documents whose names begin with a date; those findings were always true, the checker was not looking.
+
+**From v3.7.1**, the jump is small and additive. There is no manual v3.7.2; the POSIX parity work published under that number on the plugin line is folded into v3.8.0 instead, so you go straight from v3.7.1 to v3.8.1 and skip nothing.
 
 **From v3.6.1 or earlier**, `/phaneslightupgrade` sees a migration boundary between your version and this one and routes you through the full migration path instead of an in-place update. Same steps, longer checklist.
 
@@ -344,7 +346,7 @@ PhanesLight never installs these. It discovers them only if you already have the
 
 ## Version
 
-**Current: v3.8.0** (2026-09-05). Full accounting in [`Changelog.md`](Changelog.md).
+**Current: v3.8.1** (2026-09-05). Full accounting in [`Changelog.md`](Changelog.md).
 
 **What is new:**
 

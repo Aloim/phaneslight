@@ -1,4 +1,4 @@
-# phaneslight-template v3.8.0 anchor-check
+# phaneslight-template v3.8.1 anchor-check
 # Windows launcher for the anchor-check node program. The program is ONE artifact shared by both
 # platforms, exactly as scripts/cli.js already is, because its parser is a markdown grammar plus a
 # tree-derived path resolver plus nested JSON config, and maintaining that twice would buy nothing

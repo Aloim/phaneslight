@@ -6,6 +6,71 @@ All notable changes to **PhanesLight**. The authoritative version marker is the 
 
 ---
 
+## v3.8.1 (2026-09-05)
+
+Two instruments that reported clean without having measured, found by a downstream project diffing its installed scripts against the published v3.7.1 and v3.8.0 templates. Both predate v3.8.0: the `v3.7.1..v3.8.0` diff, read hunk by hunk for this release, leaves both regions untouched. That is the point of the process change at the end of this entry.
+
+### The stamp guard stopped overriding the trees a project listed
+
+`templates/scripts/windows/hook-stamp-guard.ps1:52` and `templates/scripts/posix/hook-stamp-guard.sh:54` appended `modules` to the stamped-tree list unconditionally, after an explicit `stampedTrees` had already been read. So `stampedTrees` did not mean what `phaneslight.md`'s Step 4 says it means, and a project that deliberately excluded a tree had no knob that made the exclusion hold. Where a module is a logical name rather than a root path, and that name happens to equal a real root directory, every new file under that directory was denied at exit 2 unless its author wrote a stamp the project forbids.
+
+**The two ports also disagreed before this release.** Windows replaced the default list with `stampedTrees`; POSIX never replaced it at all and appended `stampedTrees` to `src tests documentation`. So a POSIX project that set `stampedTrees` to exclude `src` still guarded `src`, and a Windows project with the same config did not. Measured on both ports against the same fixture.
+
+**The rule now, identical on both ports.** An explicit non-empty `stampedTrees` is authoritative: the guard protects exactly those trees plus `docRoot`, and `modules` is not added. An absent or empty `stampedTrees` falls back to `src`, `tests`, `documentation` plus `docRoot` plus `modules`, which keeps the convenience for the common shape where module names are source-root paths. `docRoot` is appended in both branches: the documentation stamp is a different guarantee from the source stamp. `phaneslight.md` Step 4 now states that rule exactly rather than describing it loosely.
+
+### `doc-check` freezes folders, and stopped exempting every dated file
+
+`templates/scripts/windows/doc-check.ps1:73` and `templates/scripts/posix/doc-check.sh:74` matched the `YYYY-MM-DD` frozen-class pattern against every segment of the relative path, the file name included. The Windows comment on that very line reads "dated snapshot folder". A living plan is conventionally named `<YYYY-MM-DD>_<topic>.md`, so **every dated living document was silently exempt from both the 500-line ceiling and the DOC-header check**, and `doc-check: OK` was vacuous for the whole class. One downstream project found a whole tree of living plans in that state, every prior `doc-check: OK` on it vacuous.
+
+The date test, the `archive` and `session-summaries` tests, and slashless `frozen_classes` entries now apply to **directory segments only** on both ports. A frozen class is a folder; a file's own name never freezes it. Dated snapshot folders, `session-summaries/`, `archive/` and `frozen_classes` folders are exempt exactly as before. This also closes a narrower divergence in the same function: POSIX tested `frozen_classes` against `dirname` while Windows tested every segment including the file name.
+
+### The spec says what happens when `api-diff` cannot measure
+
+`phaneslight.md`'s `api-diff` paragraph described the output on success and said nothing about an extraction failure, a missing baseline slice, or an unresolvable ref, while two closure duties invoked it with no failure rule. `api-diff` is `generatedNotFetched`, so a project generates it from that paragraph and inherits the silence. The spec now binds it: `api-diff` **MUST fail closed**, a non-zero exit with the cause on stderr, never an empty or partial diff. The two closure duties carry the same rule: a non-zero exit is an UNMEASURED surface, never a clean one.
+
+### The upgrade prompt refreshes itself before it replaces anything else
+
+`PhanesLightUpgrade.md` Step 2 replaced the installed `phaneslight.md` and only then tested whether the upgrade prompt itself was stale. A stale prompt had therefore already performed one file replacement, using its own notion of the target, before discovering it should not have been running. The self-check is now point 1. `phaneslight.md` Step 0's "yes" branch says so, so a reader is not left wondering whether an installed but stale `/phaneslightupgrade` is a hazard: it is not, because the upgrade command refreshes itself first.
+
+### One sha256 rule, and it covers the generated scripts too
+
+`PhanesLightUpgrade.md`'s disposition table said `.phaneslight/scripts/*` is REGENERATE with no exception, while Step 3's upgrade-set computation said the opposite: `OLD ∩ NEW` is REGENERATE unless the on-disk sha256 differs from the manifest hash, in which case PRESERVE-and-flag. A reader working the table alone regenerated over local repairs, which is what a downstream project reported. The table row now carries the exception the `.claude/workflows/*` row always carried, and Step 3 states that the sha256 rule is the only rule and no disposition row overrides it. It also settles the `generatedNotFetched` case: `regen-registry` and `api-diff` have no `templateSha256` and never will, because nothing was ever fetched for them, so the install-time `sha256` is their baseline; a differing on-disk sha is a local repair to preserve and flag with the existing `CUSTOMIZATION STALE` advisory, not an artifact to overwrite.
+
+### The release process now reads its own diff
+
+The owner's ask, and the reason this release exists: nobody had read the `v3.7.1..v3.8.0` diff hunk by hunk before that tag was cut. Two instruments that report clean without measuring were sitting in it.
+
+`publish/publish.sh` gains a pre-publish **diff report**: after the copy and `git add -A`, it prints `git diff --cached --stat HEAD`, so every changed file is listed before the releaser commits. It is a report and not a guard: it prints, it never refuses, and it cannot change the exit status. A machine cannot judge whether a hunk was intended, so it does not pretend to; it makes the full list impossible to skip past. The procedure documented in the script's header now names the step: **every hunk must be traceable to an item in the run's plan, and an untraceable hunk is drift.**
+
+Guard 8 was itself an instance of the failure class. Its `grep -rL` include list matched five extensions, and `templates/scripts/posix/phaneslight` has none, so the shipped POSIX dispatcher carried a stamp the guard never opened. Forced-violated: a `v9.9.9` stamp there passed the old guard clean. The include list now names it and the guard asserts the count of files it read, so a future silent omission is loud.
+
+### Installed project impact
+
+**Affected.** Every installation that has `.phaneslight/scripts/hook-stamp-guard.*` or `doc-check.*` on disk, which is every installation from v2.6 on. Both defects are older than v3.8.0.
+
+**Breaking.** No structural change, no migration boundary. `migrationBoundaries` stays `["3.5.0", "3.7.0"]`; v3.8.0 to v3.8.1 is an in-place update. Two behaviour changes are intended and may surface work that was previously hidden:
+
+- If your project set `stampedTrees` and relied, knowingly or not, on `modules` widening it, trees that were guarded will stop being guarded. Add them to `stampedTrees` if you wanted them.
+- `doc-check` will now report living documents whose names begin with a date. Expect `OVER-CEILING` and `NO-DOC-HEADER` lines that never appeared before. They were always true; the checker was not looking.
+
+**Verify.** After upgrading, from the project root:
+
+1. `node .phaneslight/scripts/cli.js doc-check`. If your documentation tree holds dated living plans, the offender count should be higher than it was under v3.8.0. A count that did not move on a tree that has dated plans means the new script did not install.
+2. Create a file under a tree your `stampedTrees` excludes and confirm the stamp guard does not deny it, and one under a tree it includes and confirm it does.
+3. `node .phaneslight/scripts/cli.js loc-check` and the rest of the smoke set still exit 0.
+
+### Carried, not fixed in this release
+
+- **Per-class documentation ceilings.** `doc-check` has one hardcoded 500-line ceiling. A plan is read end to end by an executing agent and a session summary is browsed through `_index.md`, so one number does not fit both. Proposed for v3.8.2: `doc_discipline.class_ceilings: {"<docRoot-relative prefix>": <lines>}`, longest prefix wins, default 500, documented beside `index_exclusions` and `frozen_classes` with the same per-platform case-matching note. Deferred deliberately: a new config key on both ports plus spec text is not hotfix material.
+- **`anchor-check --strict` reports clean when its input could not be read.** `templates/scripts/anchor-check.js:899` treats "nothing was checked" as clean whether that is a fresh project with no `CLAUDE.local.md` or an unreadable one. Found by this release's own `v3.7.1..v3.8.0` diff review, which is the process change working the first time it ran. Bounded: the documented consumer reads the per-anchor text verdicts, not the exit code, and the report line is honest about the zero. Carried to v3.8.2.
+- **Three large POSIX ports were not read line by line** against their Windows siblings during the diff review (`batch-apply.sh`, `census-diff.sh`, `manifest-write.sh`). They were grepped for the failure class and their scaffolding read. Recorded as review debt rather than claimed as covered.
+
+### The plugin line
+
+`Aloim/phaneslightplugin` carries both defects. Its `hook-stamp-guard.ps1`, `hook-stamp-guard.sh` and `doc-check.ps1` are byte-identical to the files fixed here, and its `doc-check.sh` differs only by the manual line's unreadable-file skip. Verified by byte comparison, not assumed. Both fixes are recorded with evidence in the plugin line's own v3.8.1 plan; they are not applied here, because the two lines are separate products published from separate repositories.
+
+---
+
 ## v3.8.0 (2026-09-05)
 
 **`anchor-check`, a codebase-agnostic command that resolves the precise pointers a plan or handover uses against the working tree and names the ones that have gone stale. It ships alongside the POSIX parity work the plugin line shipped separately as v3.7.2, absorbed here because this line never published that number on its own.**

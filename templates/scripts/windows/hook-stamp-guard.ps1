@@ -1,4 +1,4 @@
-# phaneslight-template v3.8.0 hook-stamp-guard
+# phaneslight-template v3.8.1 hook-stamp-guard
 # PreToolUse(Write) guard. Reads the tool-call JSON from stdin. Denies (exit 2) creation of a NEW
 # file under a stamped tree whose content lacks the required header stamp, so new files must go
 # through `phaneslight new-file`. Every other call passes (exit 0). Fails open on tool-call JSON or IO
@@ -47,9 +47,22 @@ try {
   $stamped = @('src', 'tests', 'documentation')
   try {
     $cfg = Get-Content -LiteralPath (Join-Path $root '.phaneslight\config.json') -Raw -Encoding utf8 | ConvertFrom-Json
-    if ($cfg.stampedTrees) { $stamped = $cfg.stampedTrees }
+    # An explicit stampedTrees is AUTHORITATIVE (v3.8.1). Appending modules to it, as this did
+    # through v3.8.0, meant a project that deliberately excluded a tree had no knob that made the
+    # exclusion hold: where modules are logical names rather than root paths, a name that happens
+    # to equal an unrelated root directory guarded it anyway, and every new file there was denied
+    # unless its author wrote the very stamp the project forbids. modules stays a convenience over
+    # the DEFAULT list, where module names are usually source-root paths, and is never added to a
+    # list the project wrote by hand.
+    if ($cfg.stampedTrees -and @($cfg.stampedTrees).Count -gt 0) {
+      $stamped = @($cfg.stampedTrees)
+    } elseif ($cfg.modules) {
+      $stamped += $cfg.modules
+    }
+    # docRoot is appended in BOTH branches and is the one floor an explicit list does not remove:
+    # the DOC header it guards is what doc-index and doc-check read, so listing the documentation
+    # root is a restatement of the rule rather than a choice.
     if ($cfg.docRoot) { $stamped += ([string]$cfg.docRoot).TrimEnd('/', '\') }
-    if ($cfg.modules) { $stamped += $cfg.modules }
   } catch {
     # This is the PreToolUse gate that makes `phaneslight new-file` mandatory; a malformed config must
     # not silently switch it off. Fall back to the default stamped-tree list and say so on stderr,

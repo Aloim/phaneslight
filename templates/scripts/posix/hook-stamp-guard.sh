@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.8.0 hook-stamp-guard
+# phaneslight-template v3.8.1 hook-stamp-guard
 # PreToolUse(Write) guard. Reads the tool-call JSON from stdin. Denies (exit 2) creation of a NEW
 # file under a stamped tree whose content lacks the required header stamp, so new files must go
 # through `phaneslight new-file`. Every other call passes (exit 0). Fails open on any parse trouble.
@@ -47,12 +47,23 @@ case "$fp" in
 esac
 
 cfgfile="$root/.phaneslight/config.json"
-stamped="src tests documentation"
 docRoot=$(cfg_str docRoot "$cfgfile")
 while [ "${docRoot%/}" != "$docRoot" ]; do docRoot=${docRoot%/}; done
+# An explicit stampedTrees is AUTHORITATIVE (v3.8.1). Through v3.8.0 this port never replaced the
+# defaults at all: it appended docRoot, modules AND stampedTrees to "src tests documentation", so
+# the two platforms guarded different sets from the same config, and a POSIX project that set
+# stampedTrees to exclude src still guarded src. Same rule on both ports now: an explicit list is
+# exactly that list, and modules extends the DEFAULT list only, never a list the project wrote.
+trees=$(cfg_arr stampedTrees "$cfgfile")
+if [ -n "$trees" ]; then
+  stamped="$trees"
+else
+  stamped="src tests documentation"
+  mods=$(cfg_arr modules "$cfgfile"); [ -n "$mods" ] && stamped="$stamped $mods"
+fi
+# docRoot is appended in BOTH branches and is the one floor an explicit list does not remove:
+# the DOC header it guards is what doc-index and doc-check read.
 [ -n "$docRoot" ] && stamped="$stamped $docRoot"
-mods=$(cfg_arr modules "$cfgfile"); [ -n "$mods" ] && stamped="$stamped $mods"
-trees=$(cfg_arr stampedTrees "$cfgfile"); [ -n "$trees" ] && stamped="$stamped $trees"
 
 guarded=0
 for t in $stamped; do

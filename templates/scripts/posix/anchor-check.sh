@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.8.0 anchor-check
+# phaneslight-template v3.8.1 anchor-check
 # POSIX launcher for the anchor-check node program. The program is ONE artifact shared by both
 # platforms, exactly as scripts/cli.js already is, so this file is a launcher and carries no
 # node-core region of its own: there is no second copy here to drift.

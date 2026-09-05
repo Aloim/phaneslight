@@ -1,4 +1,4 @@
-# phaneslight-template v3.8.0 doc-check
+# phaneslight-template v3.8.1 doc-check
 # Scans the documentation tree (archive/ excluded) for living documents over the 500-line ceiling
 # or missing a DOC header line, for folders holding docs but no _index.md, and for indexes older
 # than their newest sibling. Prints offenders with line counts. Frozen artifact classes (session
@@ -67,16 +67,31 @@ function Is-Frozen([string]$normPath) {
   # relative segments below the doc root
   $rel = $normPath.Substring($docNorm.Length).TrimStart('/')
   $segs = $rel -split '/'
-  foreach ($s in $segs) {
+  # DIRECTORY segments only (v3.8.1). $rel ends in the FILE name, and through v3.8.0 the date test
+  # ran over that last segment too. A living plan is conventionally named <YYYY-MM-DD>_<topic>.md,
+  # so every dated living document was silently exempt from the ceiling and the DOC-header check,
+  # and `doc-check: OK` was vacuous for that whole class. A frozen class is a FOLDER; a file's own
+  # name never freezes it. The count guard is not decoration: in PowerShell 0..-1 is the
+  # two-element range (0, -1), so $segs[0..-1] returns the first and the LAST element rather than
+  # an empty slice, and an unguarded slice would test a single-segment file by its own name.
+  $dirSegs = @()
+  if ($segs.Count -gt 1) { $dirSegs = @($segs[0..($segs.Count - 2)]) }
+  $dirRel = $dirSegs -join '/'
+  foreach ($s in $dirSegs) {
     if ($s -eq 'archive') { return $true }
     if ($s -eq 'session-summaries') { return $true }
     if ($s -match '^\d{4}-\d{2}-\d{2}') { return $true }  # dated snapshot folder
   }
   foreach ($e in $frozen) {
     if ($e -notmatch '/') {
-      foreach ($s in $segs) { if ($s -eq $e) { return $true } }
+      # Directory segments only, matching the POSIX sibling, which has always tested
+      # dirname "$rel" here. A class is a folder name, never a file name.
+      foreach ($s in $dirSegs) { if ($s -eq $e) { return $true } }
     } else {
-      if ($rel -eq $e -or $rel.StartsWith($e + '/', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+      # A slashed entry is a folder PREFIX and is tested against the directory path, never against
+      # $rel: tested against $rel, an entry equal to a file's own path froze that file here while
+      # the POSIX port, testing dirname alone, audited it.
+      if ($dirRel -eq $e -or $dirRel.StartsWith($e + '/', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
     }
   }
   return $false

@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.8.0 install-templates
+# phaneslight-template v3.8.1 install-templates
 # Mechanizes CHECKLIST items 1-9 and 11 for the POSIX platform: fetches the manifest's posix
 # script set plus the every-platform files (cli.js, prompt templates) into a staging directory,
 # sanity-checks every stamp THERE, and only then installs (scripts flat into

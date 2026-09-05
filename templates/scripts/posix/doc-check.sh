@@ -1,5 +1,5 @@
 #!/bin/sh
-# phaneslight-template v3.8.0 doc-check
+# phaneslight-template v3.8.1 doc-check
 # Scans the documentation tree (archive/ excluded) for living documents over the 500-line ceiling
 # or missing a DOC header line, for folders holding docs but no _index.md, and for indexes older
 # than their newest sibling. Prints offenders with line counts. Frozen artifact classes (session
@@ -66,16 +66,22 @@ exclusions=$(cfg_arr index_exclusions "$root/.phaneslight/config.json" | norm_en
 
 is_frozen() { # is_frozen REL
   rel=$1
-  case "/$rel/" in
+  # DIRECTORY segments only (v3.8.1). $rel ends in the FILE name, and through v3.8.0 the date
+  # pattern was matched against the whole of it, so a living plan named <YYYY-MM-DD>_<topic>.md
+  # froze itself and was silently exempt from the ceiling and the DOC-header check. A frozen class
+  # is a FOLDER; a file's own name never freezes it. The frozen_classes test below already worked
+  # on the directory alone, and now every test does.
+  dir=$(dirname "$rel")
+  [ "$dir" = "." ] && dir=""
+  [ -n "$dir" ] || return 1
+  case "/$dir/" in
     */archive/*) return 0 ;;
     */session-summaries/*) return 0 ;;
   esac
   # dated snapshot folder segment (YYYY-MM-DD...)
-  printf '%s' "$rel" | grep -qE '(^|/)[0-9]{4}-[0-9]{2}-[0-9]{2}' && return 0
+  printf '%s' "$dir" | grep -qE '(^|/)[0-9]{4}-[0-9]{2}-[0-9]{2}' && return 0
   if [ -n "$frozenlist" ]; then
-    dir=$(dirname "$rel")
-    [ "$dir" = "." ] && dir=""
-    if [ -n "$dir" ] && is_listed "$dir" "$frozenlist"; then return 0; fi
+    if is_listed "$dir" "$frozenlist"; then return 0; fi
   fi
   return 1
 }

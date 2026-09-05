@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// phaneslight-template v3.8.0 anchor-check
+// phaneslight-template v3.8.1 anchor-check
 // Resolves the precise pointers a plan, brief or handover uses against the WORKING TREE and
 // names the ones that have gone stale. An anchor is a file:line, a block range, a measured line
 // count or a numeric constant. It goes stale when it was accurate when written and the tree then
@@ -828,7 +828,7 @@ function checkObligations(subjects) {
 // ------------------------------------------------------------------------------------------
 // Report.
 // ------------------------------------------------------------------------------------------
-say('anchor-check v3.8.0, resolved against the working tree');
+say('anchor-check v3.8.1, resolved against the working tree');
 say('root: ' + ROOT);
 say('candidates: ' + CANDIDATES.length + ' from ' + CAND.source);
 say('inputs: ' + (inputList.length === 0 ? 'none' : inputList.join(', ')));
